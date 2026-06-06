@@ -1,0 +1,2 @@
+jmcomic
+pyinstaller>=6.0

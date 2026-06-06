@@ -1,0 +1,29 @@
+# PyInstaller 构建产物
+dist/
+build/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.so
+
+# 虚拟环境
+venv/
+.venv/
+.JM/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 下载目录
+downloads/
+
+# jmcomic源码库
+jmcomic库实现/
