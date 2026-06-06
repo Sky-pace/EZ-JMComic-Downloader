@@ -48,15 +48,16 @@ def setup_working_directory() -> None:
         os.chdir(os.path.dirname(sys.executable))
 
 
-def prompt_image_format() -> str:
-    fmt = input('Enter image format (e.g., jpg, png): ').strip() or 'jpg'
+def prompt_image_format(default_fmt: str = '.jpg') -> str:
+    hint = f'Enter image format (e.g., jpg, png) [{default_fmt}]: '
+    fmt = input(hint).strip() or default_fmt
     if not fmt.startswith('.'):
         fmt = '.' + fmt
     return fmt
 
 
-def prompt_download_path() -> str:
-    return input('Enter download path: ').strip() or './downloads'
+def prompt_download_path(default_path: str = './downloads') -> str:
+    return input(f'Enter download path [{default_path}]: ').strip() or default_path
 
 
 def main() -> None:
@@ -68,13 +69,17 @@ def main() -> None:
     # 1. 相册 ID
     album_id = get_album_id()
 
-    # 2. 图片格式
-    fmt = prompt_image_format()
-    option.download.image.suffix = fmt
+    # 2. 图片格式 — 从 yml 读取默认值，用户输入非空时才覆盖
+    yml_fmt = getattr(option.download.image, 'suffix', '.jpg')
+    fmt = prompt_image_format(yml_fmt)
+    if fmt != yml_fmt:
+        option.download.image.suffix = fmt
 
-    # 3. 下载路径
-    download_path = prompt_download_path()
-    option.dir_rule.base_dir = download_path
+    # 3. 下载路径 — 从 yml 读取默认值，用户输入非空时才覆盖
+    yml_path = getattr(option.dir_rule, 'base_dir', './downloads')
+    download_path = prompt_download_path(yml_path)
+    if download_path != yml_path:
+        option.dir_rule.base_dir = download_path
 
     jmcomic.download_album(album_id, option)
 
