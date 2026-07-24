@@ -8,9 +8,19 @@
 jmcomic/
 ├── app/                    # 主程序源码
 │   ├── __init__.py
-│   └── main.py             # 入口脚本
+│   ├── main.py             # 入口脚本
+│   ├── core/               # 核心业务层
+│   │   ├── __init__.py
+│   │   ├── env.py          # 运行环境检测
+│   │   ├── config.py       # 配置加载
+│   │   └── downloader.py   # 下载编排
+│   └── ui/                 # 用户交互层
+│       ├── __init__.py
+│       └── prompts.py      # 命令行交互
 ├── config/                 # 配置文件
 │   └── option.yml          # 下载参数（图片格式、路径等）
+├── release/                # 发行版文件
+│   └── v1.1.0/             # 当前版本
 ├── tests/                  # 测试
 │   ├── __init__.py
 │   └── test_main.py        # 功能/冒烟测试
