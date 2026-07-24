@@ -25,5 +25,8 @@ Thumbs.db
 # 下载目录
 downloads/
 
+# 安全回收站
+_to_delete/
+
 # jmcomic源码库
 jmcomic库实现/
