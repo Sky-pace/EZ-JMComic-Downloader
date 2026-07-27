@@ -31,29 +31,31 @@ def _confirm_and_rollback() -> None:
 
 
 def run_menu() -> None:
-    """显示主菜单并执行用户选择的任务"""
-    # 仅打包环境会返回非 None；检查失败静默降级为"无更新可选"
+    """显示主菜单并执行用户选择的任务；任务完成后返回菜单，输入 0 才退出"""
+    # 仅打包环境会返回非 None；每次启动只检查一次，检查失败静默降级为"无更新可选"
     release = check_for_update()
 
-    items = [
-        ('1', '下载漫画'),
-        ('2', '查看历史记录'),
-    ]
-    if release:
-        items.append(('3', f"更新到 {release.get('tag_name', '')}（当前 v{__version__}）"))
-    if has_rollback():
-        items.append(('4', '回滚到上一版本'))
-    items.append(('0', '退出'))
+    while True:
+        items = [
+            ('1', '下载漫画'),
+            ('2', '查看历史记录'),
+        ]
+        if release:
+            items.append(('3', f"更新到 {release.get('tag_name', '')}（当前 v{__version__}）"))
+        if has_rollback():
+            items.append(('4', '回滚到上一版本'))
+        items.append(('0', '退出'))
 
-    print(f'\n===== JM 漫画下载器 v{__version__} =====')
-    choice = prompt_menu_choice(items)
+        print(f'\n===== JM 漫画下载器 v{__version__} =====')
+        choice = prompt_menu_choice(items)
 
-    if choice == '1':
-        download_run()
-    elif choice == '2':
-        history_show()
-    elif choice == '3' and release:
-        _confirm_and_update(release)
-    elif choice == '4' and has_rollback():
-        _confirm_and_rollback()
-    # '0'：直接退出
+        if choice == '0':
+            return
+        if choice == '1':
+            download_run()
+        elif choice == '2':
+            history_show()
+        elif choice == '3' and release:
+            _confirm_and_update(release)
+        elif choice == '4' and has_rollback():
+            _confirm_and_rollback()
