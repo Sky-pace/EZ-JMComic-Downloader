@@ -26,5 +26,10 @@ def run() -> None:
     if download_path != yml_path:
         option.dir_rule.base_dir = download_path
 
-    jmcomic.download_album(album_id, option)
+    try:
+        jmcomic.download_album(album_id, option)
+    except Exception as e:
+        print(f'\n下载失败：{e}')
+        return
+
     history_add(album_id)

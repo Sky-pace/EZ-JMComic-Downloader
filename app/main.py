@@ -21,7 +21,11 @@ def main() -> None:
         history_show()
         return
 
-    run()
+    try:
+        run()
+    except (EOFError, KeyboardInterrupt):
+        # 输入流被关闭（管道/重定向）或用户按下 Ctrl+C
+        print('\n已取消。')
 
 
 if __name__ == '__main__':

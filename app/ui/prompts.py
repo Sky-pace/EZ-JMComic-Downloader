@@ -2,12 +2,16 @@
 
 
 def get_album_id() -> str:
-    """获取漫画相册 ID，确保非空"""
-    album_id = input('Enter album ID: ').strip()
-    if not album_id:
-        print('Album ID cannot be empty, please try again.')
-        return get_album_id()
-    return album_id
+    """获取漫画相册 ID，确保为纯数字"""
+    while True:
+        album_id = input('Enter album ID: ').strip()
+        if not album_id:
+            print('Album ID cannot be empty, please try again.')
+            continue
+        if not album_id.isdigit():
+            print('Album ID must be a number, please try again.')
+            continue
+        return album_id
 
 
 def prompt_image_format(default_fmt: str = '.jpg') -> str:

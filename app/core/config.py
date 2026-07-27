@@ -23,7 +23,12 @@ def resolve_option_path() -> str:
         if os.path.isfile(external_path):
             return external_path
         # 回退到 PyInstaller 内置资源
-        return os.path.join(sys._MEIPASS, 'config', 'option.yml')
+        fallback_path = os.path.join(sys._MEIPASS, 'config', 'option.yml')
+        if os.path.isfile(fallback_path):
+            return fallback_path
+        raise FileNotFoundError(
+            f'找不到 option.yml，已尝试：\n  {external_path}\n  {fallback_path}'
+        )
 
     # 源码运行：项目根目录
     return os.path.join(get_executable_dir(), 'config', 'option.yml')

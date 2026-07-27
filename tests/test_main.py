@@ -1,59 +1,60 @@
 """
-测试 jmdownload 程序是否能正常运行。
+冒烟测试：验证 jmdownload 程序能正常启动并完成 --history 流程。
+
+使用 --history 而非完整下载流程，避免触发真实网络下载。
 
 用法:
     python -m pytest tests/test_main.py
     python tests/test_main.py
 """
 
-import subprocess
 import os
+import subprocess
 import sys
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EXE_PATH = os.path.join(PROJECT_ROOT, 'dist', 'jmdownload-v1.1.0.exe')
+TIMEOUT = 30
 
-def main():
-    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    app_module = os.path.join(script_dir, 'app', 'main.py')
 
-    test_input = "12345\njpg\n" + os.path.join(script_dir, "downloads") + "\n"
+def _build_cmd() -> list[str]:
+    """优先测试打包后的 .exe，不存在则以模块方式运行源码"""
+    if os.path.exists(EXE_PATH):
+        return [EXE_PATH, '--history']
+    return [sys.executable, '-m', 'app.main', '--history']
 
-    # 优先测试打包后的 .exe，不存在则运行 Python 脚本
-    exe_path = os.path.join(script_dir, 'dist', 'jmdownload-v1.1.0.exe')
-    if os.path.exists(exe_path):
-        cmd = [exe_path]
-    else:
-        cmd = [sys.executable, app_module]
 
+def test_main_runs():
+    """程序应能以退出码 0 完成 --history 流程"""
+    cmd = _build_cmd()
+    result = subprocess.run(
+        cmd,
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=TIMEOUT,
+    )
+
+    print("===== STDOUT =====")
+    print(result.stdout)
+    print("===== STDERR =====")
+    print(result.stderr)
+
+    assert result.returncode == 0, (
+        f'程序以非零状态退出（{result.returncode}），请检查日志'
+    )
+
+
+def main() -> int:
+    """脚本方式运行冒烟测试，返回进程退出码"""
     try:
-        process = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-
-        stdout, stderr = process.communicate(input=test_input, timeout=10)
-
-        print("===== STDOUT =====")
-        print(stdout)
-        print("\n===== STDERR =====")
-        print(stderr)
-        print(f"\n返回码: {process.returncode}")
-
-        if process.returncode != 0:
-            print("⚠ 程序以非零状态退出，请检查日志")
-        else:
-            print("✓ 程序正常运行")
-
-    except subprocess.TimeoutExpired:
-        print("超时：脚本运行时间过长（可能正在下载尝试）")
-        process.kill()
-    except FileNotFoundError:
-        print(f"文件未找到: {cmd}")
-    except Exception as e:
-        print(f"运行出错: {e}")
+        test_main_runs()
+    except (AssertionError, subprocess.TimeoutExpired) as e:
+        print(f'[FAIL] {e}')
+        return 1
+    print('[OK] 程序正常运行')
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

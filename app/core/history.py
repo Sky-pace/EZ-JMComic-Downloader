@@ -4,12 +4,14 @@ import json
 import os
 from datetime import datetime
 
+from app.core.env import get_executable_dir
+
 HISTORY_FILENAME = '.jm_history.json'
 
 
 def _get_history_path() -> str:
-    """获取历史记录文件的完整路径（存放于程序工作目录）"""
-    return os.path.join(os.getcwd(), HISTORY_FILENAME)
+    """获取历史记录文件的完整路径（存放于程序运行目录，与 cwd 无关）"""
+    return os.path.join(get_executable_dir(), HISTORY_FILENAME)
 
 
 def _load() -> list[dict]:
@@ -28,10 +30,13 @@ def _load() -> list[dict]:
 
 
 def _save(records: list[dict]) -> None:
-    """保存历史记录到文件"""
+    """保存历史记录到文件（写入失败时仅告警，不中断主流程）"""
     path = _get_history_path()
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(records, f, ensure_ascii=False, indent=2)
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
+    except OSError as e:
+        print(f'警告：历史记录写入失败（{e}）')
 
 
 def add(album_id: str) -> None:

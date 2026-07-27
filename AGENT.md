@@ -89,7 +89,7 @@ pyinstaller jmdownload.spec
 - `history` 模块中函数名与内置名冲突时，使用 `from x import y as z` 方式重命名（如 `add as history_add`）
 
 ### 3.6 历史记录
-- 历史记录文件为 `.jm_history.json`，存储于程序运行目录（`os.getcwd()`）
+- 历史记录文件为 `.jm_history.json`，存储于程序运行目录（`get_executable_dir()`：打包后为 .exe 目录，源码运行为项目根目录，与 cwd 无关）
 - 已加入 `.gitignore`，不应被提交
 - 包含 `album_id` 和 `time` 字段，自动去重
 
