@@ -34,5 +34,16 @@ _to_delete/
 # AI 协作规范（仅本地，不上传）
 AGENT.md
 
+# Release 归档中的二进制（通过 GitHub Releases 分发，不入库）
+release/**/*.exe
+release/**/*.exe.sha256
+
+# 自更新临时产物
+*.exe.old
+*.exe.new
+
+# pytest 缓存
+.pytest_cache/
+
 # jmcomic源码库
 jmcomic库实现/
