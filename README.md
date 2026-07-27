@@ -15,7 +15,8 @@ jmcomic/
 │   │   ├── config.py       # 配置加载
 │   │   ├── downloader.py   # 下载编排
 │   │   ├── history.py      # 历史记录管理
-│   │   └── updater.py      # 自更新（检查 GitHub Releases）
+│   │   ├── updater.py      # 自更新（检查 / 更新 / 回滚）
+│   │   └── menu.py         # 主菜单编排
 │   └── ui/                 # 用户交互层
 │       ├── __init__.py
 │       └── prompts.py      # 命令行交互
