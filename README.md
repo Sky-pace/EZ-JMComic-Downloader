@@ -14,14 +14,14 @@ jmcomic/
 │   │   ├── env.py          # 运行环境检测
 │   │   ├── config.py       # 配置加载
 │   │   ├── downloader.py   # 下载编排
-│   │   └── history.py      # 历史记录管理
+│   │   ├── history.py      # 历史记录管理
+│   │   └── updater.py      # 自更新（检查 GitHub Releases）
 │   └── ui/                 # 用户交互层
 │       ├── __init__.py
 │       └── prompts.py      # 命令行交互
 ├── config/                 # 配置文件
 │   └── option.yml          # 下载参数（图片格式、路径等）
-├── release/                # 发行版文件
-│   └── v1.1.0/             # 当前版本
+├── release/                # 历史版本归档（exe 通过 Releases 分发）
 ├── tests/                  # 测试
 │   ├── __init__.py
 │   └── test_main.py        # 功能/冒烟测试
@@ -33,14 +33,20 @@ jmcomic/
 
 ## 🚀 快速开始
 
-### 方式一：源码运行
+### 方式一：下载 exe（推荐）
+
+从 [Releases](https://github.com/Sky-pace/EZ-JMComic-Downloader/releases/latest) 下载最新的 `jmdownload-vX.Y.Z.exe`，双击即可运行。
+
+exe 启动时会**自动检查更新**：发现新版本会自动下载、校验并替换自身，随后重启完成升级。下载路径、历史记录、配置文件均不受影响。
+
+### 方式二：源码运行
 
 ```bash
 pip install -r requirements.txt
 python -m app.main
 ```
 
-### 方式二：打包为 .exe
+### 方式三：打包为 .exe
 
 ```bash
 pip install pyinstaller
@@ -87,6 +93,12 @@ dir_rule:
 | 找不到 option.yml | 确保 `config/option.yml` 存在 |
 | 能在 Mac / Linux 运行吗 | 使用 `python -m app.main` 即可 |
 | 打包后 option.yml 找不到 | 已通过 `.spec` 的 `datas` 配置处理，无需额外操作 |
+| exe 如何升级 | 启动时自动更新，无需手动操作；也可到 Releases 页手动下载覆盖 |
+| 更新失败/想回滚 | exe 旁的 `.old` 文件是上一版本备份，改回原名即可 |
+
+## 🐛 问题反馈
+
+下载异常或有功能建议，请到 [Issues](https://github.com/Sky-pace/EZ-JMComic-Downloader/issues) 反馈。
 
 ## 📄 许可
 
