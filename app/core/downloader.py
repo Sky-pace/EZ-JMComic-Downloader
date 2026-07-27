@@ -30,6 +30,8 @@ def run() -> None:
         jmcomic.download_album(album_id, option)
     except Exception as e:
         print(f'\n下载失败：{e}')
+        print('可能是相册 ID 不存在，或 jmcomic 库与目标站点不兼容——请留意新版本发布。')
+        print('问题持续存在可到仓库反馈：https://github.com/Sky-pace/EZ-JMComic-Downloader/issues')
         return
 
     history_add(album_id)
