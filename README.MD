@@ -13,7 +13,8 @@ jmcomic/
 │   │   ├── __init__.py
 │   │   ├── env.py          # 运行环境检测
 │   │   ├── config.py       # 配置加载
-│   │   └── downloader.py   # 下载编排
+│   │   ├── downloader.py   # 下载编排
+│   │   └── history.py      # 历史记录管理
 │   └── ui/                 # 用户交互层
 │       ├── __init__.py
 │       └── prompts.py      # 命令行交互
@@ -45,15 +46,26 @@ python -m app.main
 pip install pyinstaller
 pyinstaller jmdownload.spec
 ```
-构建产物位于 `dist/jmdownload.exe`，双击即可运行。
+构建产物位于 `dist/jmdownload-v1.1.0.exe`，双击即可运行。
 
 ### 使用
+
+#### 下载漫画
 
 程序启动后按提示依次输入：
 
 1. **相册 ID** — 漫画 ID（数字）
 2. **图片格式** — `jpg`、`png`、`webp` 等（默认 `jpg`）
 3. **下载路径** — 保存目录（默认 `./downloads`）
+
+#### 查看历史记录
+
+```bash
+python -m app.main --history
+```
+
+下载过的漫画 ID 会自动记录，可通过此命令查看历史及存储文件路径。
+历史记录文件为 `.jm_history.json`，存放于程序运行目录。
 
 ## ⚙️ 配置
 

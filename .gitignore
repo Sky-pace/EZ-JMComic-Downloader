@@ -28,5 +28,8 @@ downloads/
 # 安全回收站
 _to_delete/
 
+# 历史记录（用户本地数据）
+.jm_history.json
+
 # jmcomic源码库
 jmcomic库实现/

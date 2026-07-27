@@ -18,7 +18,7 @@ def main():
     test_input = "12345\njpg\n" + os.path.join(script_dir, "downloads") + "\n"
 
     # 优先测试打包后的 .exe，不存在则运行 Python 脚本
-    exe_path = os.path.join(script_dir, 'dist', 'jmdownload.exe')
+    exe_path = os.path.join(script_dir, 'dist', 'jmdownload-v1.1.0.exe')
     if os.path.exists(exe_path):
         cmd = [exe_path]
     else:

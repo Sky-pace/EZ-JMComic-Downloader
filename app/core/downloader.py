@@ -3,6 +3,7 @@
 import jmcomic
 
 from app.core.config import load_option
+from app.core.history import add as history_add
 from app.ui.prompts import get_album_id, prompt_image_format, prompt_download_path
 
 
@@ -26,3 +27,4 @@ def run() -> None:
         option.dir_rule.base_dir = download_path
 
     jmcomic.download_album(album_id, option)
+    history_add(album_id)
