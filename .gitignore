@@ -31,5 +31,8 @@ _to_delete/
 # 历史记录（用户本地数据）
 .jm_history.json
 
+# AI 协作规范（仅本地，不上传）
+AGENT.md
+
 # jmcomic源码库
 jmcomic库实现/
