@@ -60,8 +60,6 @@ def show() -> None:
         print('(暂无历史记录)')
         return
     print(f'共 {len(records)} 条记录:\n')
-    print('  {"album_id": "xxxx", "time": "2026-07-27 09:00:00"}')
-    print()
     for r in records:
         print(f'  {r["album_id"]}  —  {r["time"]}')
     print()

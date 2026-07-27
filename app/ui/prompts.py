@@ -4,19 +4,19 @@
 def get_album_id() -> str:
     """获取漫画相册 ID，确保为纯数字"""
     while True:
-        album_id = input('Enter album ID: ').strip()
+        album_id = input('请输入相册 ID: ').strip()
         if not album_id:
-            print('Album ID cannot be empty, please try again.')
+            print('相册 ID 不能为空，请重新输入。')
             continue
         if not album_id.isdigit():
-            print('Album ID must be a number, please try again.')
+            print('相册 ID 必须是数字，请重新输入。')
             continue
         return album_id
 
 
 def prompt_image_format(default_fmt: str = '.jpg') -> str:
     """获取图片格式，默认使用传入值"""
-    hint = f'Enter image format (e.g., jpg, png) [{default_fmt}]: '
+    hint = f'请输入图片格式（如 jpg、png）[默认 {default_fmt.lstrip(".")}]: '
     fmt = input(hint).strip() or default_fmt
     if not fmt.startswith('.'):
         fmt = '.' + fmt
@@ -25,7 +25,7 @@ def prompt_image_format(default_fmt: str = '.jpg') -> str:
 
 def prompt_download_path(default_path: str = './downloads') -> str:
     """获取下载路径，默认使用传入值"""
-    return input(f'Enter download path [{default_path}]: ').strip() or default_path
+    return input(f'请输入下载路径 [默认 {default_path}]: ').strip() or default_path
 
 
 def prompt_menu_choice(items: list[tuple[str, str]]) -> str:

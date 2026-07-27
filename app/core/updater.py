@@ -40,13 +40,23 @@ def _http_get(url: str, timeout: int):
 
 
 def _download(url: str, dest: str) -> None:
-    """流式下载文件到指定路径"""
+    """流式下载文件到指定路径（显示百分比进度）"""
     with _http_get(url, DOWNLOAD_TIMEOUT) as resp, open(dest, 'wb') as f:
+        total = int(resp.headers.get('Content-Length') or 0)
+        downloaded = 0
+        shown_tenth = -1
         while True:
             chunk = resp.read(1 << 16)
             if not chunk:
                 break
             f.write(chunk)
+            downloaded += len(chunk)
+            if total:
+                tenth = downloaded * 10 // total
+                if tenth != shown_tenth:
+                    shown_tenth = tenth
+                    print(f'  下载进度：{tenth * 10}%')
+    print('  下载完成。')
 
 
 def _sha256(path: str) -> str:

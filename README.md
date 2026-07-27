@@ -99,6 +99,8 @@ dir_rule:
   base_dir: ./downloads   # 默认保存路径
 ```
 
+使用 exe 时无需手动创建：首次运行会自动在 exe 同目录生成 `config/option.yml`，编辑后下次启动生效。
+
 ## ❓ 常见问题
 
 | 问题 | 解决 |
