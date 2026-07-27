@@ -35,7 +35,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='jmdownload-v1.2.2',
+    name='jmdownload',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

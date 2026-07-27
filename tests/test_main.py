@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXE_PATH = os.path.join(PROJECT_ROOT, 'dist', 'jmdownload-v1.2.2.exe')
+EXE_PATH = os.path.join(PROJECT_ROOT, 'dist', 'jmdownload.exe')
 TIMEOUT = 30
 
 
