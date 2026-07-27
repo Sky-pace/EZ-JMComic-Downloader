@@ -1,6 +1,6 @@
-"""自更新模块 —— 启动时检查 GitHub Releases 新版本，自动下载并替换自身
+"""自更新模块 —— 检查 GitHub Releases 新版本，由用户决定更新或回滚
 
-仅对 PyInstaller 打包的 .exe 生效；源码运行直接跳过。
+仅对 PyInstaller 打包的 .exe 生效；源码运行所有函数均安全降级。
 任何更新失败都不影响程序正常使用。
 """
 
@@ -72,12 +72,41 @@ def _find_assets(release: dict) -> tuple[dict, dict]:
     return exe_asset, sha_asset
 
 
-def _apply_update(exe_asset: dict, sha_asset: dict) -> None:
-    """下载新 exe，校验 sha256 后替换当前运行的 exe（旧版本保留为 .old 备份）"""
+def _restart() -> None:
+    """启动新版本并退出当前进程"""
+    subprocess.Popen([sys.executable], cwd=get_executable_dir())
+    sys.exit(0)
+
+
+def check_for_update() -> dict | None:
+    """检查是否有新版本（仅打包环境）。有则返回 Release 信息，否则返回 None"""
+    if not is_frozen():
+        return None
+    try:
+        release = json.loads(_http_get(API_URL, CHECK_TIMEOUT).read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        if e.code != 404:  # 404 = 仓库还没有任何 Release，属正常情况
+            print(f'检查更新失败（不影响使用）：{e}')
+        return None
+    except Exception as e:
+        print(f'检查更新失败（不影响使用）：{e}')
+        return None
+
+    latest = release.get('tag_name', '')
+    if not latest or _version_key(latest) <= _version_key(__version__):
+        return None
+    return release
+
+
+def apply_update(release: dict) -> None:
+    """下载 Release 中的新 exe，校验 sha256 后替换当前 exe（旧版本保留为 .old），随后重启"""
     current = sys.executable
     new_path = current + '.new'
     old_path = current + '.old'
 
+    exe_asset, sha_asset = _find_assets(release)
+
+    print('正在下载新版本...')
     _download(exe_asset['browser_download_url'], new_path)
 
     with _http_get(sha_asset['browser_download_url'], CHECK_TIMEOUT) as resp:
@@ -92,32 +121,24 @@ def _apply_update(exe_asset: dict, sha_asset: dict) -> None:
     os.rename(current, old_path)
     os.rename(new_path, current)
 
-
-def _restart() -> None:
-    """启动新版本并退出当前进程"""
-    subprocess.Popen([sys.executable], cwd=get_executable_dir())
-    sys.exit(0)
+    print('更新完成，正在重启...')
+    _restart()
 
 
-def check_and_update() -> None:
-    """检查并应用更新（仅打包环境生效；失败时打印提示后继续使用旧版本）"""
-    if not is_frozen():
-        return
-    try:
-        release = json.loads(_http_get(API_URL, CHECK_TIMEOUT).read().decode('utf-8'))
-    except urllib.error.HTTPError as e:
-        if e.code != 404:  # 404 = 仓库还没有任何 Release，属正常情况
-            print(f'检查更新失败（不影响使用）：{e}')
-        return
-    try:
-        latest = release.get('tag_name', '')
-        if not latest or _version_key(latest) <= _version_key(__version__):
-            return
+def has_rollback() -> bool:
+    """是否存在可回滚的旧版本备份（.old 文件）"""
+    return is_frozen() and os.path.exists(sys.executable + '.old')
 
-        print(f'发现新版本 {latest}（当前 v{__version__}），正在自动更新...')
-        exe_asset, sha_asset = _find_assets(release)
-        _apply_update(exe_asset, sha_asset)
-        print('更新完成，正在重启...')
-        _restart()
-    except Exception as e:
-        print(f'自动更新失败（不影响使用）：{e}')
+
+def rollback() -> None:
+    """回滚：当前 exe 与 .old 备份互换（可再次回滚），随后重启"""
+    current = sys.executable
+    old_path = current + '.old'
+    tmp_path = current + '.swap'
+
+    os.rename(current, tmp_path)
+    os.rename(old_path, current)
+    os.rename(tmp_path, old_path)
+
+    print('已回滚到上一版本，正在重启...')
+    _restart()

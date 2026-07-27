@@ -17,7 +17,8 @@ jmcomic/
 │   │   ├── config.py              # option.yml 路径解析与加载
 │   │   ├── downloader.py          # 下载编排器（参数收集 + 下载）
 │   │   ├── history.py             # 历史记录管理（.jm_history.json）
-│   │   └── updater.py             # 自更新（检查 GitHub Releases + 热替换）
+│   │   ├── updater.py             # 自更新（检查 / 更新 / 回滚，用户决定）
+│   │   └── menu.py                # 主菜单编排（下载 / 历史 / 更新 / 回滚）
 │   └── ui/                        # 用户交互层
 │       ├── __init__.py
 │       └── prompts.py             # 命令行交互（输入/输出）
@@ -54,8 +55,8 @@ jmcomic/
 ### 2.1 `app/main.py`
 - 仅包含 `main()` 函数
 - 调用 `setup_working_directory()` 设置工作目录
-- 调用 `check_and_update()` 执行自更新（仅打包环境生效）
-- 处理 `--history` 参数，否则调用 `downloader.run()` 启动流程
+- 处理 `--history` 参数（直接进入历史记录，供脚本/冒烟测试非交互使用）
+- 否则调用 `menu.run_menu()` 进入主菜单
 - 捕获 `EOFError` / `KeyboardInterrupt` 优雅退出
 - **不允许**包含任何业务逻辑或用户交互代码
 
@@ -87,18 +88,20 @@ jmcomic/
 - 写入失败仅告警，不中断主流程
 
 ### 2.6 `app/core/updater.py`
-- `check_and_update()` — 自更新入口，仅打包环境生效：
-  1. 请求 GitHub Releases API 获取最新版本
-  2. 与 `app.__version__` 比对，无更新则静默返回
-  3. 下载新 exe + `.sha256` 校验文件并校验
-  4. 当前 exe 重命名为 `.old`（备份），新 exe 上位
-  5. 启动新版本并退出当前进程
-- 任何失败（断网、超时、无 Release、校验失败）均降级为提示，不影响正常使用
+仅打包环境生效，提供三个独立能力（均由用户在主菜单中决定何时执行）：
+- `check_for_update()` — 请求 GitHub Releases API 比对 `app.__version__`，有新版本返回 Release 信息，否则 `None`；任何失败静默降级
+- `apply_update(release)` — 下载新 exe → sha256 校验 → 当前 exe 重命名为 `.old`（备份）→ 新 exe 上位 → 重启
+- `has_rollback()` / `rollback()` — 检测 `.old` 备份；回滚 = 当前 exe 与 `.old` 互换（可再次回滚）→ 重启
 
-### 2.7 `app/ui/prompts.py`
+### 2.7 `app/core/menu.py`
+- `run_menu()` — 主菜单编排：启动时检查更新，动态显示可选项（下载 / 历史 / 更新 / 回滚 / 退出），更新与回滚执行前均需用户确认
+
+### 2.8 `app/ui/prompts.py`
 - `get_album_id()` — 获取相册 ID（循环验证：非空 + 纯数字）
 - `prompt_image_format()` — 获取图片格式
 - `prompt_download_path()` — 获取下载路径
+- `prompt_menu_choice()` — 显示菜单并校验选择
+- `prompt_confirm()` — y/N 确认
 
 ---
 
@@ -107,7 +110,8 @@ jmcomic/
 ### 3.1 工作原理
 
 exe 启动时请求 `https://api.github.com/repos/Sky-pace/EZ-JMComic-Downloader/releases/latest`，
-比对 `tag_name` 与内置 `__version__`，有更新则自动下载、校验、热替换并重启。
+比对 `tag_name` 与内置 `__version__`。发现新版本时**仅在主菜单中给出更新选项**，
+由用户确认后才下载、校验、热替换并重启；存在 `.old` 备份时菜单同时提供回滚选项。
 
 ### 3.2 不可变更的约定（**存量用户依赖**）
 
