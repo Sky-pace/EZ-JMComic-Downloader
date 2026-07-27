@@ -48,12 +48,14 @@ pyinstaller jmdownload.spec
 
 ### 发版（Release）步骤
 
-1. 修改 `jmdownload.spec` 中的 `name` 版本号
+1. 修改 `app/__init__.py` 的 `__version__` 和 `jmdownload.spec` 中的 `name` 版本号
 2. 运行 PyInstaller 打包
 3. 将 `dist/jmdownload-vX.Y.Z.exe` + `config/option.yml` + `README.MD` 复制到 `release/vX.Y.Z/`
 4. 清理构建产物：将 `build/` 和 `dist/` 移到 `_to_delete/`（**禁止直接 rm/delete**）
-5. 提交所有变更，tag 为版本号
-6. 若配置了远程仓库，推送 commits + tags
+5. 提交所有变更，tag 为版本号，推送 commits + tags 到 GitHub
+6. 在 GitHub 创建 Release（tag 为 `vX.Y.Z`），上传两个资源（**自更新功能依赖此格式**）：
+   - `jmdownload-vX.Y.Z.exe`
+   - `jmdownload-vX.Y.Z.exe.sha256`（内容为 exe 的 sha256 十六进制摘要）
 
 ---
 
@@ -65,6 +67,7 @@ pyinstaller jmdownload.spec
 - 需要移除文件/目录时，统一使用 `mv`（Linux）或 `move`（Windows）命令移至 `_to_delete/`
 - 示例：`move build _to_delete\build`
 - 禁止使用：`rm`、`del`、`rmdir`、`os.remove()`、`shutil.rmtree()` 等任何实质性删除命令
+- **例外**：`app/core/updater.py` 自更新流程对 `.new` / `.old` 临时文件的清理不受此限（仅作用于自身更新产物，不涉及用户数据）
 
 ### 3.2 路径问题
 - 工作目录固定为 `e:\MyProject\jmcomic`，所有操作基于此目录
@@ -73,6 +76,7 @@ pyinstaller jmdownload.spec
 
 ### 3.3 版本号一致
 以下位置中的版本号必须保持同步：
+- `app/__init__.py` → `__version__`（自更新模块以此判断当前版本）
 - `jmdownload.spec` → `name = 'jmdownload-vX.Y.Z'`
 - `tests/test_main.py` → exe 路径
 - `release/vX.Y.Z/` 目录名及内容

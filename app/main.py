@@ -12,10 +12,14 @@ import sys
 from app.core.env import setup_working_directory
 from app.core.downloader import run
 from app.core.history import show as history_show
+from app.core.updater import check_and_update
 
 
 def main() -> None:
     setup_working_directory()
+
+    # 仅打包环境生效：发现新版本时会自动更新并重启，不再继续当前流程
+    check_and_update()
 
     if '--history' in sys.argv:
         history_show()
