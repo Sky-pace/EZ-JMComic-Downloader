@@ -97,6 +97,7 @@ pyinstaller jmdownload.spec
 
 ## 4. Git 工作流
 
+- **及时提交**：每完成一项独立工作（一个功能、一组 bug 修复）并验证通过后，立即提交 git，不要堆积多个不相关改动再一次提交
 - 有意义的 commit message，格式：`type: brief description`
   - 类型：`feat` / `fix` / `chore` / `docs` / `refactor`
 - 发版时打 tag：`vX.Y.Z`
