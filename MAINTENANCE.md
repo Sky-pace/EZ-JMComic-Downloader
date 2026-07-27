@@ -29,7 +29,8 @@ jmcomic/
 │   └── test_main.py               # 冒烟测试
 ├── release/                       # 版本发布归档（exe 不入库，见 .gitignore）
 │   ├── v1.0.0/
-│   └── v1.1.0/
+│   ├── v1.1.0/
+│   └── v1.2.0/
 ├── _to_delete/                    # 安全回收站（不入库）
 ├── jmdownload.spec                # PyInstaller 打包配置
 ├── requirements.txt               # 依赖声明
@@ -218,5 +219,6 @@ logger = logging.getLogger('jmdownload')
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v1.2.0 | 2026-07 | 主菜单交互；更新/回滚交由用户决定；下载失败引导反馈 |
 | v1.1.0 | - | 模块化重构，分离 core/ui 层；新增历史记录、自更新 |
 | v1.0.0 | - | 初始版本 |
