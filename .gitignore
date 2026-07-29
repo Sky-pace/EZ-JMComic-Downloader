@@ -36,9 +36,8 @@ AGENTS.md
 CLAUDE.md
 MAINTENANCE.md
 
-# Release 归档中的二进制（通过 GitHub Releases 分发，不入库）
-release/**/*.exe
-release/**/*.exe.sha256
+# Release 本地归档（二进制与副本均通过 GitHub Releases 分发，不入库）
+release/
 
 # 自更新临时产物
 *.exe.old
