@@ -65,3 +65,17 @@ def prompt_history_action(count: int) -> tuple:
         if num.isdigit() and 1 <= int(num) <= count:
             return (action, int(num))
         print('无效的输入，请重新输入。')
+
+
+def prompt_config_defaults(current_fmt: str, current_path: str) -> tuple:
+    """
+    询问新的默认配置，回车保持不变。
+    返回 (图片格式, 下载路径)，未修改的项为 None；图片格式自动补前导点。
+    """
+    fmt = input(f'默认图片格式（当前 {current_fmt.lstrip(".")}，回车保持不变）: ').strip()
+    path = input(
+        f'默认下载路径（当前 {current_path}，建议使用相对路径（基于程序所在目录），回车保持不变）: '
+    ).strip()
+    if fmt and not fmt.startswith('.'):
+        fmt = '.' + fmt
+    return (fmt or None, path or None)

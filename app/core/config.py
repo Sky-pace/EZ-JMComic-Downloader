@@ -1,6 +1,7 @@
 """配置解析模块 —— 负责定位和加载 option.yml"""
 
 import os
+import re
 import shutil
 import sys
 
@@ -53,3 +54,31 @@ def load_option(option_path: str = None):
     """加载 option.yml 并返回配置对象"""
     path = option_path or resolve_option_path()
     return jmcomic.create_option_by_file(path)
+
+
+def update_option_defaults(suffix: str = None, base_dir: str = None) -> None:
+    """
+    修改 option.yml 中的默认配置项（为 None 的项不修改）。
+    按行替换目标键的值，保留文件中的注释和用户自行添加的其他配置。
+    键不存在时抛出 KeyError。
+    """
+    path = resolve_option_path()
+    with open(path, 'r', encoding='utf-8') as f:
+        text = f.read()
+
+    for key, value in (('suffix', suffix), ('base_dir', base_dir)):
+        if value is None:
+            continue
+        # 值写到行尾或行内注释前，保留注释与其余内容
+        pattern = rf'(?m)^(\s*{key}\s*:\s*)[^#]*?(\s*#.*)?$'
+        if not re.search(pattern, text):
+            raise KeyError(f'配置文件中找不到 {key} 键：{path}')
+        # 用 lambda 避免路径中的反斜杠被当作正则转义
+        text = re.sub(
+            pattern,
+            lambda m, v=value: m.group(1) + v + (m.group(2) or ''),
+            text,
+        )
+
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(text)

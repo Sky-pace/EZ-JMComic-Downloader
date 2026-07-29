@@ -94,17 +94,19 @@ python -m app.main --history
 
 ## ⚙️ 配置
 
-编辑 `config/option.yml`：
+主菜单选择 `5` 可直接修改默认配置（图片格式、下载路径），回车保持不变，修改后下次启动生效。
+
+也可以手动编辑 `config/option.yml`：
 
 ```yml
 download:
   image:
     suffix: .jpg          # 默认图片格式
 dir_rule:
-  base_dir: ./downloads   # 默认保存路径
+  base_dir: ./downloads   # 默认保存路径（相对路径基于程序所在目录）
 ```
 
-使用 exe 时无需手动创建：首次运行会自动在 exe 同目录生成 `config/option.yml`，编辑后下次启动生效。
+使用 exe 时无需手动创建：首次运行会自动在 exe 同目录生成 `config/option.yml`。
 
 ## ❓ 常见问题
 

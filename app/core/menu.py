@@ -1,6 +1,7 @@
 """主菜单编排模块 —— 启动后询问用户要执行的任务（下载 / 历史 / 更新 / 回滚）"""
 
 from app import __version__
+from app.core.config import load_option, update_option_defaults
 from app.core.downloader import run as download_run
 from app.core.history import (
     clear as history_clear,
@@ -8,7 +9,12 @@ from app.core.history import (
     show as history_show,
 )
 from app.core.updater import apply_update, check_for_update, has_rollback, rollback
-from app.ui.prompts import prompt_confirm, prompt_history_action, prompt_menu_choice
+from app.ui.prompts import (
+    prompt_config_defaults,
+    prompt_confirm,
+    prompt_history_action,
+    prompt_menu_choice,
+)
 
 
 def _confirm_and_update(release: dict) -> None:
@@ -60,6 +66,28 @@ def _manage_history() -> None:
             )
 
 
+def _edit_config() -> None:
+    """修改默认配置（图片格式 / 下载路径），写回 option.yml"""
+    try:
+        option = load_option()
+    except Exception as e:
+        print(f'读取配置失败：{e}')
+        return
+    current_fmt = option.download.image.get('suffix', '.jpg')
+    current_path = getattr(option.dir_rule, 'base_dir', './downloads')
+
+    new_fmt, new_path = prompt_config_defaults(current_fmt, current_path)
+    if not new_fmt and not new_path:
+        print('未做任何修改。')
+        return
+    try:
+        update_option_defaults(suffix=new_fmt, base_dir=new_path)
+    except Exception as e:
+        print(f'写入配置失败：{e}')
+        return
+    print('默认配置已更新，下次启动生效。')
+
+
 def run_menu() -> None:
     """显示主菜单并执行用户选择的任务；任务完成后返回菜单，输入 0 才退出"""
     # 仅打包环境会返回非 None；每次启动只检查一次，检查失败静默降级为"无更新可选"
@@ -74,6 +102,7 @@ def run_menu() -> None:
             items.append(('3', f"更新到 {release.get('tag_name', '')}（当前 v{__version__}）"))
         if has_rollback():
             items.append(('4', '回滚到上一版本'))
+        items.append(('5', '修改默认配置'))
         items.append(('0', '退出'))
 
         print(f'\n===== JM 漫画下载器 v{__version__} =====')
@@ -89,3 +118,5 @@ def run_menu() -> None:
             _confirm_and_update(release)
         elif choice == '4' and has_rollback():
             _confirm_and_rollback()
+        elif choice == '5':
+            _edit_config()
