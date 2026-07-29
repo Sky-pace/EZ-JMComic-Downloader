@@ -9,12 +9,13 @@ from app.core.history import add as history_add
 from app.ui.prompts import get_album_id, prompt_image_format, prompt_download_path
 
 
-def run() -> None:
-    """执行完整的下载流程"""
+def run(album_id: str = None, default_path: str = None) -> None:
+    """执行完整的下载流程。传入 album_id/default_path 时跳过对应提问（供历史记录重新下载）"""
     option = load_option()
 
     # 1. 相册 ID
-    album_id = get_album_id()
+    if album_id is None:
+        album_id = get_album_id()
 
     # 2. 图片格式 — 从 yml 读取默认值，用户输入非空时才覆盖
     yml_fmt = option.download.image.get('suffix', '.jpg')
@@ -22,8 +23,8 @@ def run() -> None:
     if fmt != yml_fmt:
         option.download.image['suffix'] = fmt
 
-    # 3. 下载路径 — 从 yml 读取默认值，用户输入非空时才覆盖
-    yml_path = getattr(option.dir_rule, 'base_dir', './downloads')
+    # 3. 下载路径 — 优先用传入的默认路径，否则从 yml 读取默认值
+    yml_path = default_path or getattr(option.dir_rule, 'base_dir', './downloads')
     download_path = prompt_download_path(yml_path)
     if download_path != yml_path:
         option.dir_rule.base_dir = download_path

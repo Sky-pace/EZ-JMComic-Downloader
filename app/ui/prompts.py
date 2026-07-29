@@ -43,3 +43,25 @@ def prompt_menu_choice(items: list[tuple[str, str]]) -> str:
 def prompt_confirm(message: str) -> bool:
     """询问用户确认，输入 y 确认，其余视为取消"""
     return input(f'{message} [y/N]: ').strip().lower() == 'y'
+
+
+def prompt_history_action(count: int) -> tuple:
+    """
+    历史记录管理输入（count 为当前记录数，序号 1-based）：
+      回车      → ('back',)
+      c         → ('clear',)
+      序号 n    → ('delete', n)
+      r+序号 n  → ('download', n)
+    """
+    while True:
+        raw = input('操作 [序号=删除, r+序号=重新下载, c=清空, 回车=返回]: ').strip().lower()
+        if raw == '':
+            return ('back',)
+        if raw == 'c':
+            return ('clear',)
+        action, num = 'delete', raw
+        if raw.startswith('r'):
+            action, num = 'download', raw[1:]
+        if num.isdigit() and 1 <= int(num) <= count:
+            return (action, int(num))
+        print('无效的输入，请重新输入。')

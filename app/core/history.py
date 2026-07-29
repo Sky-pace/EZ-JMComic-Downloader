@@ -54,6 +54,17 @@ def add(album_id: str, name: str = '', path: str = '') -> None:
     _save(records)
 
 
+def delete(album_id: str) -> None:
+    """删除指定 ID 的历史记录"""
+    records = _load()
+    _save([r for r in records if r.get('album_id') != album_id])
+
+
+def clear() -> None:
+    """清空所有历史记录"""
+    _save([])
+
+
 def _disp_width(s: str) -> int:
     """字符串的终端显示宽度（中文等全角字符按 2 计）"""
     return sum(2 if unicodedata.east_asian_width(ch) in 'WF' else 1 for ch in s)
@@ -64,24 +75,25 @@ def _pad(s: str, width: int) -> str:
     return s + ' ' * max(0, width - _disp_width(s))
 
 
-def show() -> None:
-    """以表格形式打印历史记录及存储文件路径"""
+def show() -> list[dict]:
+    """以表格形式打印历史记录（带序号）及存储文件路径，返回记录列表"""
     path = _get_history_path()
     print(f'\n历史记录文件: {path}')
     records = _load()
     if not records:
         print('(暂无历史记录)')
-        return
+        return []
 
-    headers = ('漫画ID', '漫画名称', '下载时间', '保存路径')
+    headers = ('序号', '漫画ID', '漫画名称', '下载时间', '保存路径')
     rows = [
         (
+            str(i),
             str(r.get('album_id', '-')),
             r.get('name') or '-',   # 老版本记录无此字段
             r.get('time', '-'),
             r.get('path') or '-',
         )
-        for r in records
+        for i, r in enumerate(records, 1)
     ]
     # 前 N-1 列按内容计算对齐宽度，最后一列（路径）不补齐
     widths = [
@@ -99,3 +111,4 @@ def show() -> None:
     for row in rows:
         print(render(row))
     print()
+    return records
