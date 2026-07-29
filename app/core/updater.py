@@ -39,12 +39,22 @@ def _http_get(url: str, timeout: int):
     return urllib.request.urlopen(req, timeout=timeout)
 
 
+_BAR_WIDTH = 30  # 进度条宽度（字符数）
+
+
+def _render_bar(downloaded: int, total: int) -> str:
+    """渲染单行进度条（仅用 GBK 安全字符，避免 Windows 控制台编码错误）"""
+    pct = downloaded * 100 // total
+    filled = downloaded * _BAR_WIDTH // total
+    bar = '#' * filled + '-' * (_BAR_WIDTH - filled)
+    return f'  [{bar}] {pct:3d}%  {downloaded / 2 ** 20:.1f}/{total / 2 ** 20:.1f} MB'
+
+
 def _download(url: str, dest: str) -> None:
-    """流式下载文件到指定路径（显示百分比进度）"""
+    """流式下载文件到指定路径（单行刷新进度条；服务器未返回大小时按量汇报）"""
     with _http_get(url, DOWNLOAD_TIMEOUT) as resp, open(dest, 'wb') as f:
         total = int(resp.headers.get('Content-Length') or 0)
         downloaded = 0
-        shown_tenth = -1
         while True:
             chunk = resp.read(1 << 16)
             if not chunk:
@@ -52,11 +62,10 @@ def _download(url: str, dest: str) -> None:
             f.write(chunk)
             downloaded += len(chunk)
             if total:
-                tenth = downloaded * 10 // total
-                if tenth != shown_tenth:
-                    shown_tenth = tenth
-                    print(f'  下载进度：{tenth * 10}%')
-    print('  下载完成。')
+                print('\r' + _render_bar(downloaded, total), end='', flush=True)
+            elif downloaded % (4 << 20) < (1 << 16):
+                print(f'\r  已下载 {downloaded / 2 ** 20:.1f} MB', end='', flush=True)
+    print()  # 进度条结束后换行
 
 
 def _sha256(path: str) -> str:
@@ -114,22 +123,30 @@ def apply_update(release: dict) -> None:
     new_path = current + '.new'
     old_path = current + '.old'
 
+    tag = release.get('tag_name', '')
+    print(f'\n正在更新到 {tag}')
+
     exe_asset, sha_asset = _find_assets(release)
 
-    print('正在下载新版本...')
+    print('[1/3] 正在从 GitHub 下载新版本...')
     _download(exe_asset['browser_download_url'], new_path)
+    print('[1/3] 下载完成 [OK]')
 
+    print('[2/3] 校验文件完整性...')
     with _http_get(sha_asset['browser_download_url'], CHECK_TIMEOUT) as resp:
         expected = resp.read().decode('utf-8').split()[0].strip().lower()
     if _sha256(new_path) != expected:
         os.remove(new_path)
         raise RuntimeError('新版本文件校验失败，已放弃更新')
+    print('[2/3] 校验通过 [OK]')
 
     # Windows 允许重命名正在运行的 exe，但不能直接覆盖
+    print('[3/3] 替换旧版本...')
     if os.path.exists(old_path):
         os.remove(old_path)
     os.rename(current, old_path)
     os.rename(new_path, current)
+    print('[3/3] 替换完成 [OK]')
 
     print('更新完成，正在重启...')
     _restart()
