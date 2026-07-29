@@ -92,8 +92,16 @@ def _find_assets(release: dict) -> tuple[dict, dict]:
 
 
 def _restart() -> None:
-    """启动新版本并退出当前进程"""
-    subprocess.Popen([sys.executable], cwd=get_executable_dir())
+    """启动新版本并退出当前进程
+
+    Windows 下新进程使用独立控制台（CREATE_NEW_CONSOLE）：
+    父进程退出后系统会销毁为其创建的控制台窗口，若子进程共享该控制台
+    且尚未完成挂接，会被一并销毁（双击启动时表现为"更新后没有重启"）。
+    """
+    kwargs = {}
+    if os.name == 'nt':
+        kwargs['creationflags'] = subprocess.CREATE_NEW_CONSOLE
+    subprocess.Popen([sys.executable], cwd=get_executable_dir(), **kwargs)
     sys.exit(0)
 
 
