@@ -125,10 +125,38 @@ dir_rule:
 | 更新后程序没有自动重启 | v1.3.2 已修复（旧版本更新时仍可能发生一次） | 更新本身已完成，手动双击 exe 即可 |
 | 更新后首次启动报 `ModuleNotFoundError`（如 curl_cffi._wrapper） | 一次性瞬态问题，不可复现 | 重新运行 exe 即可；持续出现请到 Issues 反馈 |
 
+## 🤝 参与贡献
+
+欢迎 Issue 和 PR。
+
+### 开发环境
+
+- Python 3.13+
+- `pip install -r requirements.txt`
+
+### 常用命令
+
+```bash
+python -m app.main          # 运行
+python tests/test_main.py   # 冒烟测试
+pyinstaller jmdownload.spec # 打包
+```
+
+### 架构约定
+
+- 分层：`app/core/`（业务逻辑）→ `app/ui/`（命令行交互），**ui 不得依赖 core**
+- `main.py` 仅组装调用，不含业务逻辑
+- 4 空格缩进，函数/模块写中文 docstring
+
+### 提交规范
+
+- commit message 格式：`type: brief description`，类型：`feat` / `fix` / `chore` / `docs` / `refactor`
+- 一个独立变更一次提交
+
 ## 🐛 问题反馈
 
 下载异常或有功能建议，请到 [Issues](https://github.com/Sky-pace/EZ-JMComic-Downloader/issues) 反馈。
 
-## 📄 许可
+## 📄 许可与免责声明
 
-仅用于学习交流，请勿用于商业用途。
+本项目仅供学习交流使用，请勿用于商业用途。使用者应遵守所在地区的法律法规及目标网站的使用条款，由此产生的一切后果由使用者自行承担，与项目作者无关。下载内容的版权归原作者所有。
