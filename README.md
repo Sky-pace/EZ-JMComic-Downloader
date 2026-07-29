@@ -85,7 +85,7 @@ pyinstaller jmdownload.spec
 python -m app.main --history
 ```
 
-下载过的漫画 ID 会自动记录，可通过此命令查看历史及存储文件路径。
+下载过的漫画会自动记录（ID、名称、保存路径、时间），可通过此命令查看。
 历史记录文件为 `.jm_history.json`，存放于程序运行目录。
 
 ## ⚙️ 配置

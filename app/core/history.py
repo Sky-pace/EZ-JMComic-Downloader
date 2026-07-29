@@ -39,13 +39,15 @@ def _save(records: list[dict]) -> None:
         print(f'警告：历史记录写入失败（{e}）')
 
 
-def add(album_id: str) -> None:
-    """追加一条历史记录（去重，保留最新）"""
+def add(album_id: str, name: str = '', path: str = '') -> None:
+    """追加一条历史记录（去重，保留最新）。name 为漫画名称，path 为保存目录（绝对路径）"""
     records = _load()
     # 移除旧记录中相同 ID 的条目
     records = [r for r in records if r.get('album_id') != album_id]
     records.insert(0, {
         'album_id': album_id,
+        'name': name,
+        'path': path,
         'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     })
     _save(records)
@@ -61,5 +63,9 @@ def show() -> None:
         return
     print(f'共 {len(records)} 条记录:\n')
     for r in records:
-        print(f'  {r["album_id"]}  —  {r["time"]}')
+        # 老版本记录只有 album_id/time，缺失字段显示为 -
+        name = r.get('name') or '-'
+        path = r.get('path') or '-'
+        print(f'  {r["album_id"]}  —  {name}  —  {r.get("time", "-")}')
+        print(f'      {path}')
     print()
