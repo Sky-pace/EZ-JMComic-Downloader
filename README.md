@@ -22,7 +22,7 @@ jmcomic/
 │       └── prompts.py      # 命令行交互
 ├── config/                 # 配置文件
 │   └── option.yml          # 下载参数（图片格式、路径等）
-├── release/                # 历史版本归档（exe 通过 Releases 分发）
+├── release/                # 本地版本归档（不入库，exe 通过 Releases 分发）
 ├── tests/                  # 测试
 │   ├── __init__.py
 │   └── test_main.py        # 功能/冒烟测试
