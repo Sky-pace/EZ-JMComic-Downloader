@@ -2,6 +2,7 @@
 
 import json
 import os
+import unicodedata
 from datetime import datetime
 
 from app.core.env import get_executable_dir
@@ -53,19 +54,48 @@ def add(album_id: str, name: str = '', path: str = '') -> None:
     _save(records)
 
 
+def _disp_width(s: str) -> int:
+    """字符串的终端显示宽度（中文等全角字符按 2 计）"""
+    return sum(2 if unicodedata.east_asian_width(ch) in 'WF' else 1 for ch in s)
+
+
+def _pad(s: str, width: int) -> str:
+    """按显示宽度右补空格，用于表格对齐"""
+    return s + ' ' * max(0, width - _disp_width(s))
+
+
 def show() -> None:
-    """打印历史记录及存储文件路径"""
+    """以表格形式打印历史记录及存储文件路径"""
     path = _get_history_path()
     print(f'\n历史记录文件: {path}')
     records = _load()
     if not records:
         print('(暂无历史记录)')
         return
+
+    headers = ('漫画ID', '漫画名称', '下载时间', '保存路径')
+    rows = [
+        (
+            str(r.get('album_id', '-')),
+            r.get('name') or '-',   # 老版本记录无此字段
+            r.get('time', '-'),
+            r.get('path') or '-',
+        )
+        for r in records
+    ]
+    # 前 N-1 列按内容计算对齐宽度，最后一列（路径）不补齐
+    widths = [
+        max(_disp_width(headers[i]), *(_disp_width(row[i]) for row in rows))
+        for i in range(len(headers) - 1)
+    ]
+
+    def render(cols: tuple) -> str:
+        padded = [_pad(c, w) for c, w in zip(cols[:-1], widths)]
+        return '  ' + '  '.join(padded + [cols[-1]])
+
     print(f'共 {len(records)} 条记录:\n')
-    for r in records:
-        # 老版本记录只有 album_id/time，缺失字段显示为 -
-        name = r.get('name') or '-'
-        path = r.get('path') or '-'
-        print(f'  {r["album_id"]}  —  {name}  —  {r.get("time", "-")}')
-        print(f'      {path}')
+    print(render(headers))
+    print(render(tuple('-' * w for w in widths) + ('-' * 8,)))
+    for row in rows:
+        print(render(row))
     print()
