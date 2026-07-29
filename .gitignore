@@ -32,7 +32,8 @@ _to_delete/
 .jm_history.json
 
 # 协作文档（仅本地，不上传）
-AGENT.md
+AGENTS.md
+CLAUDE.md
 MAINTENANCE.md
 
 # Release 归档中的二进制（通过 GitHub Releases 分发，不入库）
