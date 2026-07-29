@@ -157,6 +157,7 @@ def apply_update(release: dict) -> None:
     print('[3/3] 替换完成 [OK]')
 
     print('更新完成，正在重启...')
+    print('（若新程序未能正常启动，请手动双击 exe；或将 .old 备份改回原名即可回滚）')
     _restart()
 
 
