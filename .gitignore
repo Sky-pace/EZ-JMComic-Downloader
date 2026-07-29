@@ -36,6 +36,9 @@ AGENTS.md
 CLAUDE.md
 MAINTENANCE.md
 
+# 发版工具脚本（仅本地，不上传）
+tools/
+
 # Release 本地归档（二进制与副本均通过 GitHub Releases 分发，不入库）
 release/
 
