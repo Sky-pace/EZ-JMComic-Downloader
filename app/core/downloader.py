@@ -40,7 +40,6 @@ def run(album_id: str = None, default_path: str = None) -> None:
 
     # 记录历史：相册名取不到时退化为空字符串，路径记录为绝对路径
     name = getattr(getattr(result, 'detail', None), 'name', '') or ''
-    history_add(album_id, name, os.path.abspath(download_path))
 
     # 下载后处理：按设置决定 每次询问(ask)/静默执行(yes)/静默跳过(no)
     merge_behavior, delete_behavior = get_post_download_behaviors()
@@ -58,3 +57,6 @@ def run(album_id: str = None, default_path: str = None) -> None:
             delete_behavior == 'ask' and prompt_confirm('是否删除原漫画图片？（PDF 已生成，图片删除后不可恢复）'))):
         if delete_album_images(option, result.detail):
             print('原漫画图片已删除。')
+
+    # 写入历史（含 PDF 路径；源目录是否存在在展示时实时检测）
+    history_add(album_id, name, os.path.abspath(download_path), pdf_path or '')

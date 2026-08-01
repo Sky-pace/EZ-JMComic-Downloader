@@ -40,8 +40,11 @@ def _save(records: list[dict]) -> None:
         print(f'警告：历史记录写入失败（{e}）')
 
 
-def add(album_id: str, name: str = '', path: str = '') -> None:
-    """追加一条历史记录（去重，保留最新）。name 为漫画名称，path 为保存目录（绝对路径）"""
+def add(album_id: str, name: str = '', path: str = '', pdf_path: str = '') -> None:
+    """
+    追加一条历史记录（去重，保留最新）。
+    name 为漫画名称，path 为图片保存目录（绝对路径），pdf_path 为 PDF 路径（无则空串）。
+    """
     records = _load()
     # 移除旧记录中相同 ID 的条目
     records = [r for r in records if r.get('album_id') != album_id]
@@ -49,6 +52,7 @@ def add(album_id: str, name: str = '', path: str = '') -> None:
         'album_id': album_id,
         'name': name,
         'path': path,
+        'pdf_path': pdf_path,
         'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     })
     _save(records)
@@ -84,14 +88,21 @@ def show() -> list[dict]:
         print('(暂无历史记录)')
         return []
 
-    headers = ('序号', '漫画ID', '漫画名称', '下载时间', '保存路径')
+    def fmt_path(p: str) -> str:
+        """源目录路径：不存在时标注（已删除），实时检测而非存死值"""
+        if not p:
+            return '-'
+        return p if os.path.isdir(p) else p + '（已删除）'
+
+    headers = ('序号', '漫画ID', '漫画名称', '下载时间', '保存路径', 'PDF')
     rows = [
         (
             str(i),
             str(r.get('album_id', '-')),
             r.get('name') or '-',   # 老版本记录无此字段
             r.get('time', '-'),
-            r.get('path') or '-',
+            fmt_path(r.get('path', '')),
+            r.get('pdf_path') or '-',   # 老版本记录无此字段
         )
         for i, r in enumerate(records, 1)
     ]

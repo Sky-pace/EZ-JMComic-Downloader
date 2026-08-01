@@ -113,26 +113,84 @@ def test_settings_behaviors():
             raise AssertionError('非法行为取值未抛 ValueError')
 
 
+class _FakeAlbum:
+    """测试用本子实体：可迭代产出章节"""
+
+    def __init__(self, name, photos, album_id='123'):
+        self.name = name
+        self.album_id = album_id
+        self._photos = photos
+
+    def __iter__(self):
+        return iter(self._photos)
+
+
+def test_merge_album_to_pdf():
+    """PDF 生成：输出到 <下载目录>/pdf/<本子名>.pdf，本子名为空时回退章节名/ID"""
+    import tempfile
+    from types import SimpleNamespace
+
+    from PIL import Image
+
+    from app.core.pdf import merge_album_to_pdf
+
+    with tempfile.TemporaryDirectory() as tmp:
+        photo_dir = os.path.join(tmp, '第1话')
+        os.makedirs(photo_dir)
+        for i in (2, 1):  # 乱序写入，验证自然排序收集
+            Image.new('RGB', (50, 50), 'white').save(os.path.join(photo_dir, f'{i}.jpg'))
+
+        option = SimpleNamespace(dir_rule=SimpleNamespace(
+            base_dir=tmp,
+            decide_image_save_dir=lambda album, photo: photo_dir,
+        ))
+
+        # 正常命名：downloads/pdf/本子名.pdf
+        album = _FakeAlbum('测试本子', [SimpleNamespace(name='第1话')])
+        pdf_path = merge_album_to_pdf(option, album)
+        assert pdf_path == os.path.join(tmp, 'pdf', '测试本子.pdf'), pdf_path
+        assert os.path.isfile(pdf_path)
+
+        # 本子名为空 → 回退章节名
+        album = _FakeAlbum('', [SimpleNamespace(name='第1话')])
+        pdf_path = merge_album_to_pdf(option, album)
+        assert pdf_path == os.path.join(tmp, 'pdf', '第1话.pdf'), pdf_path
+
+        # 本子名含 Windows 非法字符 → 清洗为合法文件名
+        album = _FakeAlbum('a/b:c', [SimpleNamespace(name='第1话')])
+        pdf_path = merge_album_to_pdf(option, album)
+        assert pdf_path == os.path.join(tmp, 'pdf', 'a_b_c.pdf'), pdf_path
+
+
 def test_delete_album_images():
-    """删除原图：本子目录被整体删除，旁边的 PDF 不受影响"""
+    """删除原图：按章节删除图片目录，pdf/ 目录与 PDF 不受影响"""
     import tempfile
     from types import SimpleNamespace
 
     from app.core.pdf import delete_album_images
 
     with tempfile.TemporaryDirectory() as tmp:
-        album_dir = os.path.join(tmp, '本子名')
-        os.makedirs(os.path.join(album_dir, '第1话'))
-        with open(os.path.join(album_dir, '第1话', '1.jpg'), 'wb') as f:
-            f.write(b'fake')
-        pdf_path = album_dir + '.pdf'
+        chapter_dirs = []
+        for chap in ('第1话', '第2话'):
+            d = os.path.join(tmp, chap)
+            os.makedirs(d)
+            with open(os.path.join(d, '1.jpg'), 'wb') as f:
+                f.write(b'fake')
+            chapter_dirs.append(d)
+        pdf_dir = os.path.join(tmp, 'pdf')
+        os.makedirs(pdf_dir)
+        pdf_path = os.path.join(pdf_dir, '本子名.pdf')
         with open(pdf_path, 'wb') as f:
             f.write(b'%PDF-fake')
 
-        option = SimpleNamespace(
-            dir_rule=SimpleNamespace(decide_album_root_dir=lambda album: album_dir))
-        assert delete_album_images(option, album=None) is True
-        assert not os.path.exists(album_dir), '本子目录应被删除'
+        dirs = iter(chapter_dirs)
+        option = SimpleNamespace(dir_rule=SimpleNamespace(
+            decide_image_save_dir=lambda album, photo: next(dirs)))
+        album = _FakeAlbum('本子名', [SimpleNamespace(name='第1话'), SimpleNamespace(name='第2话')])
+
+        assert delete_album_images(option, album) is True
+        for d in chapter_dirs:
+            assert not os.path.exists(d), f'{d} 应被删除'
         assert os.path.isfile(pdf_path), 'PDF 应保留'
 
 
@@ -142,6 +200,7 @@ def main() -> int:
         test_main_runs()
         test_pdf_merge()
         test_settings_behaviors()
+        test_merge_album_to_pdf()
         test_delete_album_images()
     except (AssertionError, subprocess.TimeoutExpired) as e:
         print(f'[FAIL] {e}')
