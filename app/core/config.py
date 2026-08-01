@@ -1,5 +1,6 @@
-"""配置解析模块 —— 负责定位和加载 option.yml"""
+"""配置解析模块 —— 负责定位和加载 option.yml、读写下载后行为设置"""
 
+import json
 import os
 import re
 import shutil
@@ -82,3 +83,58 @@ def update_option_defaults(suffix: str = None, base_dir: str = None) -> None:
 
     with open(path, 'w', encoding='utf-8') as f:
         f.write(text)
+
+
+# 下载后行为的合法取值：ask=每次询问，yes=静默执行，no=静默跳过
+BEHAVIOR_VALUES = ('ask', 'yes', 'no')
+
+
+def _default_settings_path() -> str:
+    """设置文件路径：.jm_settings.json，位于运行根目录（与历史记录同位置）"""
+    return os.path.join(get_executable_dir(), '.jm_settings.json')
+
+
+def get_post_download_behaviors(settings_path: str = None) -> tuple:
+    """
+    读取下载后行为设置，返回 (merge_pdf, delete_images)。
+    文件缺失/损坏或取值非法时对应项回退为 'ask'（每次询问）。
+    """
+    path = settings_path or _default_settings_path()
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    merge = data.get('merge_pdf')
+    delete = data.get('delete_images')
+    return (
+        merge if merge in BEHAVIOR_VALUES else 'ask',
+        delete if delete in BEHAVIOR_VALUES else 'ask',
+    )
+
+
+def update_post_download_behaviors(merge_pdf: str = None, delete_images: str = None,
+                                   settings_path: str = None) -> None:
+    """
+    写回下载后行为设置（为 None 的项不修改），文件中的其他键保持不变。
+    取值必须为 ask/yes/no，否则抛 ValueError。
+    """
+    for value in (merge_pdf, delete_images):
+        if value is not None and value not in BEHAVIOR_VALUES:
+            raise ValueError(f'非法行为取值：{value}（应为 ask/yes/no）')
+    path = settings_path or _default_settings_path()
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    if merge_pdf is not None:
+        data['merge_pdf'] = merge_pdf
+    if delete_images is not None:
+        data['delete_images'] = delete_images
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)

@@ -31,6 +31,9 @@ _to_delete/
 # 历史记录（用户本地数据）
 .jm_history.json
 
+# 下载后行为设置（用户本地数据）
+.jm_settings.json
+
 # 协作文档（仅本地，不上传）
 AGENTS.md
 CLAUDE.md

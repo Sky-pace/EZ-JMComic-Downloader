@@ -1,7 +1,12 @@
 """主菜单编排模块 —— 启动后询问用户要执行的任务（下载 / 历史 / 更新 / 回滚）"""
 
 from app import __version__
-from app.core.config import load_option, update_option_defaults
+from app.core.config import (
+    get_post_download_behaviors,
+    load_option,
+    update_option_defaults,
+    update_post_download_behaviors,
+)
 from app.core.downloader import run as download_run
 from app.core.history import (
     clear as history_clear,
@@ -67,7 +72,7 @@ def _manage_history() -> None:
 
 
 def _edit_config() -> None:
-    """修改默认配置（图片格式 / 下载路径），写回 option.yml"""
+    """修改默认配置（图片格式 / 下载路径 / 下载后行为），写回配置文件"""
     try:
         option = load_option()
     except Exception as e:
@@ -75,13 +80,17 @@ def _edit_config() -> None:
         return
     current_fmt = option.download.image.get('suffix', '.jpg')
     current_path = getattr(option.dir_rule, 'base_dir', './downloads')
+    current_merge, current_delete = get_post_download_behaviors()
 
-    new_fmt, new_path = prompt_config_defaults(current_fmt, current_path)
-    if not new_fmt and not new_path:
+    new_fmt, new_path, new_merge, new_delete = prompt_config_defaults(
+        current_fmt, current_path, current_merge, current_delete)
+    if not any((new_fmt, new_path, new_merge, new_delete)):
         print('未做任何修改。')
         return
     try:
-        update_option_defaults(suffix=new_fmt, base_dir=new_path)
+        if new_fmt or new_path:
+            update_option_defaults(suffix=new_fmt, base_dir=new_path)
+        update_post_download_behaviors(merge_pdf=new_merge, delete_images=new_delete)
     except Exception as e:
         print(f'写入配置失败：{e}')
         return

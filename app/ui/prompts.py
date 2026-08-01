@@ -67,15 +67,31 @@ def prompt_history_action(count: int) -> tuple:
         print('无效的输入，请重新输入。')
 
 
-def prompt_config_defaults(current_fmt: str, current_path: str) -> tuple:
+def _prompt_behavior(label: str, current: str):
+    """询问某项下载后行为：ask=每次询问 / yes=自动执行 / no=不执行，回车保持不变"""
+    hint = f'{label}（ask=每次询问 / yes=自动执行 / no=不执行，当前 {current}，回车保持不变）: '
+    while True:
+        value = input(hint).strip().lower()
+        if value == '':
+            return None
+        if value in ('ask', 'yes', 'no'):
+            return value
+        print('无效的输入，请输入 ask、yes 或 no。')
+
+
+def prompt_config_defaults(current_fmt: str, current_path: str,
+                           current_merge: str, current_delete: str) -> tuple:
     """
     询问新的默认配置，回车保持不变。
-    返回 (图片格式, 下载路径)，未修改的项为 None；图片格式自动补前导点。
+    返回 (图片格式, 下载路径, 整合PDF行为, 删除原图行为)，未修改的项为 None；
+    图片格式自动补前导点；行为取值为 ask/yes/no。
     """
     fmt = input(f'默认图片格式（当前 {current_fmt.lstrip(".")}，回车保持不变）: ').strip()
     path = input(
         f'默认下载路径（当前 {current_path}，建议使用相对路径（基于程序所在目录），回车保持不变）: '
     ).strip()
+    merge = _prompt_behavior('下载后整合 PDF', current_merge)
+    delete = _prompt_behavior('整合后删除原图', current_delete)
     if fmt and not fmt.startswith('.'):
         fmt = '.' + fmt
-    return (fmt or None, path or None)
+    return (fmt or None, path or None, merge, delete)
