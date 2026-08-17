@@ -8,11 +8,11 @@ import sys
 
 import jmcomic
 
-from app.core.env import get_executable_dir
+from app.core.env import get_data_dir, get_executable_dir
 
 
 def _seed_external_config(src: str, dest: str) -> bool:
-    """将内置配置复制到 exe 同目录，方便用户直接修改默认配置。失败时静默返回 False"""
+    """将配置种子复制到数据目录，方便用户直接修改默认配置。失败时静默返回 False"""
     try:
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         shutil.copyfile(src, dest)
@@ -24,31 +24,41 @@ def _seed_external_config(src: str, dest: str) -> bool:
 def resolve_option_path() -> str:
     """
     解析 option.yml 的路径，优先级:
-    1. .exe 同目录下的 config/option.yml（用户可自行修改）
+    1. 数据目录下的 config/option.yml（用户可自行修改；
+       Windows 为 exe 同目录，Linux 为 ~/.jmcomic）
     2. PyInstaller 内置的 config/option.yml（只读 fallback；
-       首次运行会复制一份到 exe 同目录，方便用户后续修改）
-    3. 源码运行：项目根目录 config/option.yml
+       首次运行会复制一份到数据目录，方便用户后续修改）
+    3. 源码运行：优先数据目录（Windows 下即项目根目录），
+       缺失时从项目根目录自举一份，保证 Linux 数据统一落 ~/.jmcomic
     """
     frozen = getattr(sys, 'frozen', False)
+    data_path = os.path.join(get_data_dir(), 'config', 'option.yml')
 
     if frozen:
-        exe_dir = get_executable_dir()
-        external_path = os.path.join(exe_dir, 'config', 'option.yml')
-        if os.path.isfile(external_path):
-            return external_path
+        if os.path.isfile(data_path):
+            return data_path
         # 回退到 PyInstaller 内置资源
         fallback_path = os.path.join(sys._MEIPASS, 'config', 'option.yml')
         if os.path.isfile(fallback_path):
-            # 配置自举：复制到 exe 同目录后优先使用外部副本
-            if _seed_external_config(fallback_path, external_path):
-                return external_path
+            # 配置自举：复制到数据目录后优先使用外部副本
+            if _seed_external_config(fallback_path, data_path):
+                return data_path
             return fallback_path
         raise FileNotFoundError(
-            f'找不到 option.yml，已尝试：\n  {external_path}\n  {fallback_path}'
+            f'找不到 option.yml，已尝试：\n  {data_path}\n  {fallback_path}'
         )
 
-    # 源码运行：项目根目录
-    return os.path.join(get_executable_dir(), 'config', 'option.yml')
+    # 源码运行：数据目录优先，缺失时从项目根目录自举
+    project_path = os.path.join(get_executable_dir(), 'config', 'option.yml')
+    if os.path.isfile(data_path):
+        return data_path
+    if os.path.isfile(project_path):
+        if _seed_external_config(project_path, data_path):
+            return data_path
+        return project_path
+    raise FileNotFoundError(
+        f'找不到 option.yml，已尝试：\n  {data_path}\n  {project_path}'
+    )
 
 
 def load_option(option_path: str = None):
@@ -90,8 +100,11 @@ BEHAVIOR_VALUES = ('ask', 'yes', 'no')
 
 
 def _default_settings_path() -> str:
-    """设置文件路径：.jm_settings.json，位于运行根目录（与历史记录同位置）"""
-    return os.path.join(get_executable_dir(), '.jm_settings.json')
+    """设置文件路径：.jm_settings.json，位于数据目录（与历史记录同位置）
+
+    Windows：exe 同目录；Linux：~/.jmcomic。
+    """
+    return os.path.join(get_data_dir(), '.jm_settings.json')
 
 
 def get_post_download_behaviors(settings_path: str = None) -> tuple:

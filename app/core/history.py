@@ -5,14 +5,17 @@ import os
 import unicodedata
 from datetime import datetime
 
-from app.core.env import get_executable_dir
+from app.core.env import get_data_dir
 
 HISTORY_FILENAME = '.jm_history.json'
 
 
 def _get_history_path() -> str:
-    """获取历史记录文件的完整路径（存放于程序运行目录，与 cwd 无关）"""
-    return os.path.join(get_executable_dir(), HISTORY_FILENAME)
+    """获取历史记录文件的完整路径（存放于程序数据目录，与 cwd 无关）
+
+    Windows：exe 同目录；Linux：~/.jmcomic。
+    """
+    return os.path.join(get_data_dir(), HISTORY_FILENAME)
 
 
 def _load() -> list[dict]:

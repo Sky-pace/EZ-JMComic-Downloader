@@ -1,12 +1,13 @@
 """自更新模块 —— 检查 GitHub Releases 新版本，由用户决定更新或回滚
 
-仅对 PyInstaller 打包的 .exe 生效；源码运行所有函数均安全降级。
+仅对 PyInstaller 打包的二进制生效；源码运行所有函数均安全降级。
 任何更新失败都不影响程序正常使用。
 """
 
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -77,18 +78,37 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
+def _binary_names() -> tuple[str, str]:
+    """返回 (可执行文件名, 校验文件名)。
+
+    精确匹配当前平台的二进制名，天然支持多架构命名：
+    Windows 下 sys.executable 为 jmdownload.exe，Linux 下为 jmdownload。
+    """
+    bin_name = os.path.basename(sys.executable)
+    return bin_name, bin_name + '.sha256'
+
+
 def _find_assets(release: dict) -> tuple[dict, dict]:
-    """从 Release 资源中找到 .exe 及其 .sha256 校验文件"""
+    """从 Release 资源中精确匹配当前平台的可执行文件及其 .sha256 校验文件"""
+    bin_name, sha_name = _binary_names()
     exe_asset = sha_asset = None
     for asset in release.get('assets', []):
         name = asset.get('name', '')
-        if name.endswith('.exe'):
+        if name == bin_name:
             exe_asset = asset
-        elif name.endswith('.exe.sha256'):
+        elif name == sha_name:
             sha_asset = asset
     if not exe_asset or not sha_asset:
-        raise RuntimeError('Release 中缺少 .exe 或 .sha256 文件')
+        raise RuntimeError(f'Release 中缺少 {bin_name} 或 {sha_name} 文件')
     return exe_asset, sha_asset
+
+
+def _safe_replace(src: str, dst: str) -> None:
+    """原子重命名，跨文件系统时回退到 shutil.move（复制+删除）"""
+    try:
+        os.rename(src, dst)
+    except OSError:
+        shutil.move(src, dst)
 
 
 def _restart() -> None:
@@ -97,10 +117,14 @@ def _restart() -> None:
     Windows 下新进程使用独立控制台（CREATE_NEW_CONSOLE）：
     父进程退出后系统会销毁为其创建的控制台窗口，若子进程共享该控制台
     且尚未完成挂接，会被一并销毁（双击启动时表现为"更新后没有重启"）。
+    Linux 下使用 start_new_session 让子进程脱离终端会话，
+    终端关闭不会杀掉新进程。
     """
     kwargs = {}
     if os.name == 'nt':
         kwargs['creationflags'] = subprocess.CREATE_NEW_CONSOLE
+    else:
+        kwargs['start_new_session'] = True
     subprocess.Popen([sys.executable], cwd=get_executable_dir(), **kwargs)
     sys.exit(0)
 
@@ -126,7 +150,7 @@ def check_for_update() -> dict | None:
 
 
 def apply_update(release: dict) -> None:
-    """下载 Release 中的新 exe，校验 sha256 后替换当前 exe（旧版本保留为 .old），随后重启"""
+    """下载 Release 中的新二进制，校验 sha256 后替换当前二进制（旧版本保留为 .old），随后重启"""
     current = sys.executable
     new_path = current + '.new'
     old_path = current + '.old'
@@ -148,16 +172,22 @@ def apply_update(release: dict) -> None:
         raise RuntimeError('新版本文件校验失败，已放弃更新')
     print('[2/3] 校验通过 [OK]')
 
-    # Windows 允许重命名正在运行的 exe，但不能直接覆盖
+    # Windows 允许重命名正在运行的 exe，但不能直接覆盖；
+    # Linux 下新文件默认 0644，需先恢复执行权限再替换
     print('[3/3] 替换旧版本...')
+    if os.name != 'nt':
+        os.chmod(new_path, 0o755)
     if os.path.exists(old_path):
         os.remove(old_path)
-    os.rename(current, old_path)
-    os.rename(new_path, current)
+    _safe_replace(current, old_path)
+    _safe_replace(new_path, current)
     print('[3/3] 替换完成 [OK]')
 
     print('更新完成，正在重启...')
-    print('（若新程序未能正常启动，请手动双击 exe；或将 .old 备份改回原名即可回滚）')
+    if os.name == 'nt':
+        print('（若新程序未能正常启动，请手动双击 exe；或将 .old 备份改回原名即可回滚）')
+    else:
+        print('（若新程序未能正常启动，请重新运行 jmdownload；或重跑 install.sh 即可恢复）')
     _restart()
 
 
@@ -167,14 +197,14 @@ def has_rollback() -> bool:
 
 
 def rollback() -> None:
-    """回滚：当前 exe 与 .old 备份互换（可再次回滚），随后重启"""
+    """回滚：当前二进制与 .old 备份互换（可再次回滚），随后重启"""
     current = sys.executable
     old_path = current + '.old'
     tmp_path = current + '.swap'
 
-    os.rename(current, tmp_path)
-    os.rename(old_path, current)
-    os.rename(tmp_path, old_path)
+    _safe_replace(current, tmp_path)
+    _safe_replace(old_path, current)
+    _safe_replace(tmp_path, old_path)
 
     print('已回滚到上一版本，正在重启...')
     _restart()

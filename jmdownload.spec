@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import sys
+
 
 a = Analysis(
     ['app/main.py'],
@@ -39,7 +41,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=(sys.platform != 'linux'),
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,

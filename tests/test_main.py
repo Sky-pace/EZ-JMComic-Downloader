@@ -13,7 +13,9 @@ import subprocess
 import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXE_PATH = os.path.join(PROJECT_ROOT, 'dist', 'jmdownload.exe')
+# Windows 下打包产物为 jmdownload.exe，Linux/macOS 下为 jmdownload（无扩展名）
+_BIN_NAME = 'jmdownload.exe' if sys.platform == 'win32' else 'jmdownload'
+BIN_PATH = os.path.join(PROJECT_ROOT, 'dist', _BIN_NAME)
 TIMEOUT = 30
 
 # 直接运行本脚本时 sys.path 不含项目根目录，需手动加入才能 import app
@@ -22,9 +24,9 @@ if PROJECT_ROOT not in sys.path:
 
 
 def _build_cmd() -> list[str]:
-    """优先测试打包后的 .exe，不存在则以模块方式运行源码"""
-    if os.path.exists(EXE_PATH):
-        return [EXE_PATH, '--history']
+    """优先测试打包后的二进制，不存在则以模块方式运行源码"""
+    if os.path.exists(BIN_PATH):
+        return [BIN_PATH, '--history']
     return [sys.executable, '-m', 'app.main', '--history']
 
 
