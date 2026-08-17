@@ -2,8 +2,9 @@
 # EZ-JMComic-Downloader 安装 / 更新脚本（Linux/macOS）
 #
 # 用法:
-#   ./install.sh           从 GitHub Releases 下载最新发行版并安装
-#   ./install.sh --source  拉取源码本地构建并安装（需 Python 3.13+ 与 pip）
+#   ./install.sh           从 GitHub Releases 下载最新发行版并安装；
+#                           若 Release 暂未提供 Linux 预编译二进制，会自动回退为源码构建
+#   ./install.sh --source  强制拉取源码本地构建并安装（需 git、Python 3.13+ 与 pip）
 #   ./install.sh --help    显示帮助
 #
 # 设计:
@@ -29,7 +30,7 @@ die()  { printf '\033[1;31m[FAIL]\033[0m %s\n' "$*" >&2; exit 1; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# 下载函数：优先 curl，回退 wget
+# 下载函数：优先 curl，回退 wget；下载失败时返回非零（不直接退出，交由调用方决定）
 download() {
     local url="$1" dest="$2"
     if have curl; then
@@ -39,6 +40,22 @@ download() {
     else
         die "需要 curl 或 wget 才能下载，请先安装其一"
     fi
+}
+
+# 源码构建：clone 仓库 + 安装依赖 + PyInstaller 打包
+build_from_source() {
+    info "源码构建模式：拉取仓库并本地打包（需 git、Python 3.13+）..."
+    for cmd in git python3; do
+        have "$cmd" || die "源码构建需要 $cmd，请先安装"
+    done
+    python3 -m pip --version >/dev/null 2>&1 || die "源码构建需要 pip（python3 -m pip）"
+    BUILD_DIR="$(mktemp -d)"
+    git clone --depth 1 "https://github.com/${REPO}.git" "$BUILD_DIR"
+    ( cd "$BUILD_DIR" \
+        && python3 -m pip install -r requirements.txt pyinstaller \
+        && python3 -m PyInstaller jmdownload.spec --noconfirm )
+    cp "$BUILD_DIR/dist/${BIN_NAME}" "$TMP_FILE"
+    ok "源码构建完成"
 }
 
 # 计算文件 sha256
@@ -58,8 +75,8 @@ case "${1:-}" in
     --source) MODE="source" ;;
     --help|-h)
         echo "用法:"
-        echo "  ./install.sh           从 GitHub Releases 下载最新发行版并安装"
-        echo "  ./install.sh --source  拉取源码本地构建并安装（需 Python 3.13+ 与 pip）"
+        echo "  ./install.sh           从 GitHub Releases 下载最新发行版并安装；若无预编译二进制则自动源码构建"
+        echo "  ./install.sh --source  强制源码本地构建并安装（需 git、Python 3.13+ 与 pip）"
         echo "  ./install.sh --help    显示帮助"
         exit 0
         ;;
@@ -80,24 +97,22 @@ cleanup() {
 trap cleanup EXIT
 
 if [ "$MODE" = "source" ]; then
-    info "源码构建模式：拉取仓库并本地打包..."
-    BUILD_DIR="$(mktemp -d)"
-    git clone --depth 1 "https://github.com/${REPO}.git" "$BUILD_DIR"
-    ( cd "$BUILD_DIR" \
-        && python3 -m pip install -r requirements.txt \
-        && python3 -m PyInstaller jmdownload.spec --noconfirm )
-    cp "$BUILD_DIR/dist/${BIN_NAME}" "$TMP_FILE"
+    build_from_source
 else
     info "从 GitHub Releases 下载最新版..."
-    download "${DOWNLOAD_BASE}/${BIN_NAME}" "$TMP_FILE"
-    # 校验 sha256（Release 提供校验文件时）
-    if download "${DOWNLOAD_BASE}/${BIN_NAME}.sha256" "$TMP_FILE.sha256" 2>/dev/null; then
-        expected="$(awk '{print $1}' "$TMP_FILE.sha256")"
-        actual="$(sha256_of "$TMP_FILE")"
-        [ "$expected" = "$actual" ] || die "sha256 校验失败，已中止安装"
-        ok "sha256 校验通过"
+    if ! download "${DOWNLOAD_BASE}/${BIN_NAME}" "$TMP_FILE"; then
+        warn "Release 暂未提供 Linux 预编译二进制，自动切换为源码构建..."
+        build_from_source
     else
-        warn "未找到校验文件，跳过 sha256 校验"
+        # 校验 sha256（Release 提供校验文件时）
+        if download "${DOWNLOAD_BASE}/${BIN_NAME}.sha256" "$TMP_FILE.sha256" 2>/dev/null; then
+            expected="$(awk '{print $1}' "$TMP_FILE.sha256")"
+            actual="$(sha256_of "$TMP_FILE")"
+            [ "$expected" = "$actual" ] || die "sha256 校验失败，已中止安装"
+            ok "sha256 校验通过"
+        else
+            warn "未找到校验文件，跳过 sha256 校验"
+        fi
     fi
 fi
 
