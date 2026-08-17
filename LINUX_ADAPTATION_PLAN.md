@@ -189,9 +189,17 @@ sys.exit(0)
 - 完成后**不自动改 PATH**，按 `$SHELL` 检测并打印 bash / zsh / fish 对应提示（见「总体设计决策 2」）；
 - 该脚本同时即**「一条命令自更新」**的入口。
 
-### 4. `jmdownload.spec` — `upx=False`（🟡 体验）
+### 4. `jmdownload.spec` — `upx` 按平台条件化（🟡 体验）
 
-Linux onefile 下建议关闭 UPX：UPX 压缩的 ELF 在部分发行版（启用 seccomp / 加固策略的环境）可能被内核拒绝执行。`upx=True` 改为 `upx=False`；Windows 侧行为不变（upx 对 .exe 的影响与 Linux 不同）。
+Linux onefile 下建议关闭 UPX：UPX 压缩的 ELF 在部分发行版（启用 seccomp / 加固策略的环境）可能被内核拒绝执行。
+
+**注意**：`jmdownload.spec` 是 Windows / Linux **共用**的同一份文件，直接改成 `upx=False` 会让 Windows 打包产物也失去 UPX 压缩（仅影响体积，不影响功能）。为做到 Windows 零变化，应**按平台条件化**：
+
+```python
+upx=(sys.platform != 'linux'),
+```
+
+即 Windows 保持 `upx=True` 压缩产物，Linux 关闭 UPX。
 
 ### 5. `.gitignore` — 补 Linux 自更新临时产物（🟡）
 
@@ -242,7 +250,7 @@ jmdownload.swap
 | `app/core/history.py` | 改用 `get_data_dir()` | 历史落 `~/.jmcomic` |
 | `app/core/updater.py` | 精确匹配二进制名、`chmod +x`、`_safe_replace`、`start_new_session`、跨平台文案 | 自更新全链路 |
 | `install.sh`（新增） | 下载/源码构建、sha256 校验、PATH 提示 | 一条命令安装 / 更新 |
-| `jmdownload.spec` | `upx=False` | Linux onefile 稳健性 |
+| `jmdownload.spec` | `upx` 按平台条件化 | Linux onefile 稳健性，Windows 压缩产物不变 |
 | `.gitignore` | 补 Linux 临时产物；调整 `tools/` 忽略 | 防误入库 |
 | `tests/test_main.py` | 跨平台二进制路径探测 | 测试正确性 |
 | `README.md` | 方式四（含 bash/zsh/fish 三栏 PATH）、FAQ、版本号修正 | 文档 |

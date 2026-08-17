@@ -34,40 +34,51 @@ jmcomic/
 
 ## 🚀 快速开始
 
-### 方式一：下载 exe（推荐）
+### Windows：下载 exe
 
 从 [Releases](https://github.com/Sky-pace/EZ-JMComic-Downloader/releases/latest) 下载最新的 `jmdownload.exe`，双击即可运行。
 
 exe 启动时会**自动检查更新**：发现新版本时主菜单会出现更新选项，由你确认后才会下载、校验并升级。升级后旧版本保留为备份，可通过菜单随时回滚。下载路径、历史记录、配置文件均不受影响。
 
-### 方式二：源码运行
+### Linux / macOS：一键安装
+
+一条命令从 GitHub Releases 下载并安装到 `~/.jmcomic`（免 sudo）：
 
 ```bash
-pip install -r requirements.txt
-python -m app.main
+curl -fsSL https://raw.githubusercontent.com/Sky-pace/EZ-JMComic-Downloader/main/tools/install.sh -o install.sh
+bash install.sh
 ```
 
-### 方式三：打包为 .exe
+或直接拉取源码本地构建：
 
 ```bash
-pip install pyinstaller
-pyinstaller jmdownload.spec
+bash install.sh --source
 ```
-构建产物位于 `dist/jmdownload.exe`，双击即可运行。
+
+安装完成后，**最后一步：将程序加入 PATH**，以便在终端直接使用 `jmdownload`：
+
+| Shell | 命令 |
+|-------|------|
+| bash | `echo 'export PATH="$HOME/.jmcomic/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc` |
+| zsh | `echo 'export PATH="$HOME/.jmcomic/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc` |
+| fish | `fish_add_path "$HOME/.jmcomic/bin"` |
+
+> 数据目录为 `~/.jmcomic`（`bin/` 存放程序、`config/` 存放配置，历史记录与默认下载均在此）。
+> 更新到最新版：重新运行 `bash install.sh` 即可（一条命令自更新）；打包版启动时也会自动检查更新，全程免 sudo。
 
 ### 使用
 
 程序启动后显示主菜单，输入数字选择：
 
 ```
-===== JM 漫画下载器 v1.2.2 =====
+===== JM 漫画下载器 v1.4.1 =====
   1. 下载漫画
   2. 查看历史记录
   0. 退出
 ```
 
 完成一项操作后会自动回到主菜单，可继续选择其他操作；输入 `0` 退出程序。
-检测到新版本或存在旧版本备份时，菜单会额外出现「更新」「回滚」选项（仅打包的 exe）。
+检测到新版本或存在旧版本备份时，菜单会额外出现「更新」「回滚」选项（仅打包版）。
 
 #### 下载漫画
 
@@ -90,10 +101,10 @@ pyinstaller jmdownload.spec
 - **c** — 清空所有记录（需确认）
 - **回车** — 返回主菜单
 
-历史记录文件为 `.jm_history.json`，存放于程序运行目录。也可直接用命令行参数查看：
+历史记录文件为 `.jm_history.json`，存放于数据目录（Windows 为 exe 同目录，Linux 为 `~/.jmcomic`）。也可直接用命令行参数查看：
 
 ```bash
-python -m app.main --history
+jmdownload --history
 ```
 
 ## ⚙️ 配置
@@ -115,7 +126,7 @@ dir_rule:
   base_dir: ./downloads   # 默认保存路径（相对路径基于程序所在目录）
 ```
 
-使用 exe 时无需手动创建：首次运行会自动在 exe 同目录生成 `config/option.yml`。
+使用打包版时无需手动创建：首次运行会自动在数据目录生成 `config/option.yml`（Windows 为 exe 同目录，Linux 为 `~/.jmcomic`）。
 
 ## ❓ 常见问题
 
@@ -123,10 +134,11 @@ dir_rule:
 |------|------|
 | 下载很慢 | 与网络和服务器有关，属正常情况 |
 | 找不到 option.yml | 确保 `config/option.yml` 存在 |
-| 能在 Mac / Linux 运行吗 | 使用 `python -m app.main` 即可 |
+| 能在 Mac / Linux 运行吗 | 支持。Linux / macOS 用 `install.sh` 一键安装（见快速开始） |
 | 打包后 option.yml 找不到 | 已通过 `.spec` 的 `datas` 配置处理，无需额外操作 |
-| exe 如何升级 | 启动时自动检查，有新版本时主菜单会出现「更新」选项，确认即可；也可到 Releases 页手动下载覆盖 |
-| 更新失败/想回滚 | 主菜单选择「回滚」；或手动将 exe 旁的 `.old` 备份改回原名 |
+| 打包版如何升级 | 启动时自动检查，有新版本时主菜单会出现「更新」选项，确认即可；Linux 也可重跑 `install.sh` |
+| 更新失败/想回滚 | 主菜单选择「回滚」；或手动将 `.old` 备份改回原名（Windows 为 exe 旁，Linux 为 `~/.jmcomic/bin` 旁） |
+| Linux 数据存在哪里 | 统一在 `~/.jmcomic`（历史、配置、默认下载） |
 
 ## ⚠️ 已知问题
 
@@ -142,15 +154,23 @@ dir_rule:
 ### 开发环境
 
 - Python 3.13+
-- `pip install -r requirements.txt`
+- 克隆仓库：`git clone https://github.com/Sky-pace/EZ-JMComic-Downloader.git`
+- 建议使用虚拟环境：
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate    Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### 常用命令
 
 ```bash
-python -m app.main          # 运行
 python tests/test_main.py   # 冒烟测试
-pyinstaller jmdownload.spec # 打包
+pyinstaller jmdownload.spec # 打包（产物在 dist/：Windows 为 jmdownload.exe，Linux 为 jmdownload）
 ```
+
+> 本地调试可用 `python -m app.main`，但**仅供开发调试**：数据会落在项目根目录（历史/配置/下载），且无自更新（自更新仅打包版可用）。正常使用请用上方「快速开始」的安装方式。
 
 ### 架构约定
 

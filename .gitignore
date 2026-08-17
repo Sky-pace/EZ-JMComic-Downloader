@@ -39,15 +39,20 @@ AGENTS.md
 CLAUDE.md
 MAINTENANCE.md
 
-# 发版工具脚本（仅本地，不上传）
-tools/
+# 发版工具脚本（仅本地，不上传；install.sh 需入库，故单独放行）
+tools/*
+!tools/install.sh
 
 # Release 本地归档（二进制与副本均通过 GitHub Releases 分发，不入库）
 release/
 
-# 自更新临时产物
+# 自更新临时产物（Windows .exe 与 Linux 无扩展名二进制）
 *.exe.old
 *.exe.new
+*.exe.swap
+jmdownload.old
+jmdownload.new
+jmdownload.swap
 
 # pytest 缓存
 .pytest_cache/
