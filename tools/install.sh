@@ -11,6 +11,7 @@
 # 设计:
 #   - 二进制与数据统一放 ~/.jmcomic（bin/、config/、历史、下载），免 sudo；
 #   - 脚本不自动修改 PATH，安装完成后按当前 shell 打印加入 PATH 的命令；
+#   - 下载带单行进度条与断点续传（中断后重跑接着下），404 与网络错误区分提示；
 #   - 幂等可重复执行，重跑即更新到最新版（"一条命令自更新"）。
 
 set -euo pipefail
@@ -31,13 +32,15 @@ die()  { printf '\033[1;31m[FAIL]\033[0m %s\n' "$*" >&2; exit 1; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# 下载函数：优先 curl，回退 wget；下载失败时返回非零（不直接退出，交由调用方决定）
+# 下载函数：优先 curl，回退 wget；单行进度条 + 断点续传（网络中断时重试接着下）
+# 返回码约定：0=成功；22(curl) / 8(wget) = HTTP 错误（如 404 资源不存在）；33(curl) = 续传偏移无效；其他 = 网络错误
 download() {
     local url="$1" dest="$2"
     if have curl; then
-        curl -fsSL --retry 3 -o "$dest" "$url"
+        # -f 让 HTTP 错误返回 22；-C - 断点续传；--retry-all-errors 网络错误也重试
+        curl -fL --progress-bar -C - --retry 3 --retry-all-errors --connect-timeout 15 -o "$dest" "$url"
     elif have wget; then
-        wget -qO "$dest" "$url"
+        wget --show-progress -q -c --tries=3 -O "$dest" "$url"
     else
         die "需要 curl 或 wget 才能下载，请先安装其一"
     fi
@@ -95,11 +98,14 @@ esac
 mkdir -p "$BIN_DIR" "$CONFIG_DIR"
 
 # ---------- 获取二进制 ----------
-TMP_FILE="$(mktemp)"
+# 下载临时文件用固定路径：网络中断后重跑本脚本可断点续传（安装成功后才清理）
+TMP_FILE="${BIN_DIR}/.${BIN_NAME}.part"
 BUILD_DIR=""
+SUCCESS=0
 cleanup() {
-    rm -f "$TMP_FILE" "$TMP_FILE.sha256"
+    [ "$SUCCESS" = 1 ] && rm -f "$TMP_FILE" "$TMP_FILE.sha256"
     [ -n "$BUILD_DIR" ] && rm -rf "$BUILD_DIR"
+    return 0
 }
 trap cleanup EXIT
 
@@ -107,15 +113,38 @@ if [ "$MODE" = "source" ]; then
     build_from_source
 else
     info "从 GitHub Releases 下载最新版..."
-    if ! download "${DOWNLOAD_BASE}/${BIN_NAME}" "$TMP_FILE"; then
+    if [ -s "$TMP_FILE" ]; then
+        info "检测到上次未完成的下载，将断点续传"
+    fi
+    rc=0
+    download "${DOWNLOAD_BASE}/${BIN_NAME}" "$TMP_FILE" || rc=$?
+    if [ "$rc" -eq 33 ]; then
+        # 续传偏移无效：本地残留比新版本还大（旧版本残留），删除后完整重下
+        warn "续传偏移无效（疑似旧版本残留），已删除残留并重新完整下载..."
+        rm -f "$TMP_FILE"
+        rc=0
+        download "${DOWNLOAD_BASE}/${BIN_NAME}" "$TMP_FILE" || rc=$?
+    fi
+    if [ "$rc" -eq 22 ] || [ "$rc" -eq 8 ]; then
+        # HTTP 错误（404）：Release 确实没有 Linux 预编译二进制，走源码构建
+        rm -f "$TMP_FILE"
         warn "Release 暂未提供 Linux 预编译二进制，自动切换为源码构建..."
         build_from_source
+    elif [ "$rc" -ne 0 ]; then
+        die "下载中断（网络错误，退出码 $rc）：无法稳定访问 GitHub 或其 CDN（release-assets.githubusercontent.com）。
+  - 已下载部分已保留，网络恢复后重跑本脚本可断点续传
+  - 也可检查网络/代理后重试，或改用源码构建：bash install.sh --source"
     else
+        ok "下载完成"
         # 校验 sha256（Release 提供校验文件时）
+        rm -f "$TMP_FILE.sha256"
         if download "${DOWNLOAD_BASE}/${BIN_NAME}.sha256" "$TMP_FILE.sha256" 2>/dev/null; then
             expected="$(awk '{print $1}' "$TMP_FILE.sha256")"
             actual="$(sha256_of "$TMP_FILE")"
-            [ "$expected" = "$actual" ] || die "sha256 校验失败，已中止安装"
+            if [ "$expected" != "$actual" ]; then
+                rm -f "$TMP_FILE"
+                die "sha256 校验失败（可能是续传拼接了旧版本残留）。残留已删除，请重跑本脚本完整下载"
+            fi
             ok "sha256 校验通过"
         else
             warn "未找到校验文件，跳过 sha256 校验"
@@ -126,6 +155,7 @@ fi
 # ---------- 安装 ----------
 chmod +x "$TMP_FILE"
 mv -f "$TMP_FILE" "$BIN_PATH"
+SUCCESS=1
 ok "已安装到 ${BIN_PATH}"
 
 # ---------- PATH 提示（不自动修改） ----------
