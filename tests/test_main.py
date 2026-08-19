@@ -196,6 +196,28 @@ def test_delete_album_images():
         assert os.path.isfile(pdf_path), 'PDF 应保留'
 
 
+def test_parse_selection():
+    """批量选择解析：序号 / 区间 / 排除 / ID 匹配 / 回车全选 / 非法输入"""
+    from app.ui.prompts import parse_selection
+
+    ids = ['100001', '100002', '100003', '100004', '100005', '100006']
+    assert parse_selection('', ids) == [0, 1, 2, 3, 4, 5]      # 回车全选
+    assert parse_selection('1 2 3', ids) == [0, 1, 2]
+    assert parse_selection('1-4', ids) == [0, 1, 2, 3]
+    assert parse_selection('1 2 4-6', ids) == [0, 1, 3, 4, 5]
+    assert parse_selection('^4', ids) == [0, 1, 2, 4, 5]       # 纯排除 = 全选扣除
+    assert parse_selection('1 2 ^2', ids) == [0]               # 混用时从正选剔除
+    assert parse_selection('100003', ids) == [2]               # 优先按 ID 匹配
+    assert parse_selection('3 3 1', ids) == [0, 2]             # 去重升序
+    for bad in ('0', '7', 'abc', '3-2', '1-x', '^0', '^'):
+        try:
+            parse_selection(bad, ids)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f'{bad!r} 应抛 ValueError')
+
+
 def main() -> int:
     """脚本方式运行测试，返回进程退出码"""
     try:
@@ -204,6 +226,7 @@ def main() -> int:
         test_settings_behaviors()
         test_merge_album_to_pdf()
         test_delete_album_images()
+        test_parse_selection()
     except (AssertionError, subprocess.TimeoutExpired) as e:
         print(f'[FAIL] {e}')
         return 1

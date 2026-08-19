@@ -1,17 +1,19 @@
 """用户交互模块 —— 负责所有用户输入/输出"""
 
 
-def get_album_id() -> str:
-    """获取漫画相册 ID，确保为纯数字"""
+def get_album_ids() -> list[str]:
+    """获取漫画相册 ID（支持空格分隔批量输入），确保均为纯数字；去重并保持输入顺序"""
     while True:
-        album_id = input('请输入相册 ID: ').strip()
-        if not album_id:
+        raw = input('请输入相册 ID（批量下载可用空格分隔多个 ID）: ').strip()
+        if not raw:
             print('相册 ID 不能为空，请重新输入。')
             continue
-        if not album_id.isdigit():
-            print('相册 ID 必须是数字，请重新输入。')
+        ids = raw.split()
+        bad = [i for i in ids if not i.isdigit()]
+        if bad:
+            print(f'相册 ID 必须是数字，请检查：{" ".join(bad)}')
             continue
-        return album_id
+        return list(dict.fromkeys(ids))
 
 
 def prompt_image_format(default_fmt: str = '.jpg') -> str:
@@ -43,6 +45,63 @@ def prompt_menu_choice(items: list[tuple[str, str]]) -> str:
 def prompt_confirm(message: str) -> bool:
     """询问用户确认，输入 y 确认，其余视为取消"""
     return input(f'{message} [y/N]: ').strip().lower() == 'y'
+
+
+def parse_selection(text: str, album_ids: list[str]) -> list[int]:
+    """
+    解析编号选择表达式，返回选中的 0-based 序号列表（升序去重）。
+
+    支持：`1 2 3`（序号）、`1-4`（区间）、`^4`（排除）、直接写 album ID（优先于序号匹配）；
+    空串为全选。全部为排除项时基于全选扣除，与正选混用时从正选结果中剔除。
+    非法输入抛 ValueError。
+    """
+    count = len(album_ids)
+    if count == 0:
+        return []
+    text = text.strip()
+    if not text:
+        return list(range(count))
+
+    def to_index(token: str) -> int:
+        if token in album_ids:  # 优先按 album ID 精确匹配，匹配不上再当序号
+            return album_ids.index(token)
+        if token.isdigit() and 1 <= int(token) <= count:
+            return int(token) - 1
+        raise ValueError(f'无效的序号或 ID：{token}')
+
+    include, exclude = set(), set()
+    for token in text.split():
+        neg = token.startswith('^')
+        body = token[1:] if neg else token
+        target = exclude if neg else include
+        if '-' in body:
+            lo, _, hi = body.partition('-')
+            if not (lo.isdigit() and hi.isdigit()) or not 1 <= int(lo) <= int(hi) <= count:
+                raise ValueError(f'无效的区间：{body}')
+            target.update(range(int(lo) - 1, int(hi)))
+        else:
+            target.add(to_index(body))
+    base = include if include else set(range(count))
+    return sorted(base - exclude)
+
+
+def prompt_selection(action: str, items: list[tuple[str, str, str]]) -> list[int]:
+    """
+    编号选择界面：items 为 (album_id, 名称, 作者) 列表，按 1-based 编号展示。
+    选择语法见 parse_selection；回车默认全选，输入 n 全不选；非法输入提示后重问。
+    返回选中的 0-based 序号列表。
+    """
+    for i, (aid, name, author) in enumerate(items, 1):
+        print(f'  {i} {name}  {author}  {aid}')
+    ids = [aid for aid, _, _ in items]
+    while True:
+        raw = input(f'==> 要{action}的漫画: （示例: "1 2 3"、"1-3"、"^4" 或漫画ID；回车全选，n 全不选）').strip()
+        if raw.lower() == 'n':
+            return []
+        try:
+            return parse_selection(raw, ids)
+        except ValueError as e:
+            print(f'{e}，请重新输入。')
 
 
 def prompt_history_action(count: int) -> tuple:
