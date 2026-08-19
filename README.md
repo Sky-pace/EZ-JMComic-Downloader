@@ -65,6 +65,8 @@ bash install.sh --source
 
 > 数据目录为 `~/.jmcomic`（`bin/` 存放程序、`config/` 存放配置，历史记录与默认下载均在此）。
 > 更新到最新版：重新运行 `bash install.sh` 即可（一条命令自更新）；打包版启动时也会自动检查更新，全程免 sudo。
+>
+> **Linux 预编译二进制的运行要求**：基于 Ubuntu 24.04（glibc 2.39）构建，要求运行环境 glibc ≥ 2.39（约相当于 Ubuntu 24.04+ / Debian 13+ / Fedora 39+）。更老的发行版请用 `bash install.sh --source` 在本机从源码构建（需 git 与 Python 3.10+，构建在临时 venv 中进行，不污染系统环境）。
 
 ### 使用
 

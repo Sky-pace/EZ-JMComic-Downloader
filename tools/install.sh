@@ -4,7 +4,8 @@
 # 用法:
 #   ./install.sh           从 GitHub Releases 下载最新发行版并安装；
 #                           若 Release 暂未提供 Linux 预编译二进制，会自动回退为源码构建
-#   ./install.sh --source  强制拉取源码本地构建并安装（需 git、Python 3.13+ 与 pip）
+#   ./install.sh --source  强制拉取源码本地构建并安装（需 git 与 Python 3.10+；
+#                           构建在临时 venv 中进行，不污染系统 Python）
 #   ./install.sh --help    显示帮助
 #
 # 设计:
@@ -42,18 +43,24 @@ download() {
     fi
 }
 
-# 源码构建：clone 仓库 + 安装依赖 + PyInstaller 打包
+# 源码构建：clone 仓库 + 临时 venv 安装依赖 + PyInstaller 打包
 build_from_source() {
-    info "源码构建模式：拉取仓库并本地打包（需 git、Python 3.13+）..."
+    info "源码构建模式：拉取仓库并本地打包（需 git、Python 3.10+）..."
     for cmd in git python3; do
         have "$cmd" || die "源码构建需要 $cmd，请先安装"
     done
-    python3 -m pip --version >/dev/null 2>&1 || die "源码构建需要 pip（python3 -m pip）"
+    # 代码使用了 3.10+ 语法（X | None 类型注解），低版本 python3 会在 import 时直接报错
+    python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' \
+        || die "源码构建需要 Python 3.10+（当前：$(python3 --version 2>&1)）"
     BUILD_DIR="$(mktemp -d)"
     git clone --depth 1 "https://github.com/${REPO}.git" "$BUILD_DIR"
+    # 在临时 venv 中构建：规避新版发行版的 PEP 668 限制（externally-managed-environment），
+    # 且不污染系统 Python；构建产物拷出后随临时目录一并清理
+    python3 -m venv "$BUILD_DIR/.venv" \
+        || die "创建虚拟环境失败（Debian/Ubuntu 需先安装 python3-venv）"
     ( cd "$BUILD_DIR" \
-        && python3 -m pip install -r requirements.txt pyinstaller \
-        && python3 -m PyInstaller jmdownload.spec --noconfirm )
+        && ./.venv/bin/python -m pip install -q -r requirements.txt \
+        && ./.venv/bin/python -m PyInstaller jmdownload.spec --noconfirm )
     cp "$BUILD_DIR/dist/${BIN_NAME}" "$TMP_FILE"
     ok "源码构建完成"
 }
@@ -76,7 +83,7 @@ case "${1:-}" in
     --help|-h)
         echo "用法:"
         echo "  ./install.sh           从 GitHub Releases 下载最新发行版并安装；若无预编译二进制则自动源码构建"
-        echo "  ./install.sh --source  强制源码本地构建并安装（需 git、Python 3.13+ 与 pip）"
+        echo "  ./install.sh --source  强制源码本地构建并安装（需 git 与 Python 3.10+，构建在临时 venv 中进行）"
         echo "  ./install.sh --help    显示帮助"
         exit 0
         ;;
