@@ -39,6 +39,8 @@ _to_delete/
 AGENTS.md
 CLAUDE.md
 MAINTENANCE.md
+LINUX_ADAPTATION_PLAN.md
+Batch_Download_Plan.md
 
 # 发版工具脚本（仅本地，不上传；install.sh 需入库，故单独放行）
 tools/*
